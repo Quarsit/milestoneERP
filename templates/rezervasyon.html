@@ -1,0 +1,676 @@
+{% extends "base.html" %}
+{% block title %}Rezervasyon{% endblock %}
+{% block header_title %}Ambar Rezervasyon Yönetimi{% endblock %}
+{% block content %}
+<style>
+  /* ════════════════════════════════════════════════════
+     REZERVASYON — LIGHT LUXURY TASARIM
+     ════════════════════════════════════════════════════ */
+
+  /* Mini istatistik kartları */
+  .rez-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px; margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--bg-surface); border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md); padding: 18px 20px;
+    box-shadow: var(--shadow-blur);
+  }
+  .stat-label {
+    font-size: 11px; color: var(--text-muted);
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .stat-val {
+    font-size: 28px; font-weight: 700; color: var(--primary);
+    margin-top: 6px; font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  }
+  .stat-val.success { color: var(--success); }
+  .stat-val.danger { color: var(--danger); }
+
+  /* Filtre Bar */
+  .filter-bar {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 20px; background: var(--bg-surface);
+    padding: 18px 20px; border-radius: var(--radius-md);
+    border: 1px solid var(--border-soft);
+    align-items: flex-end; box-shadow: var(--shadow-blur);
+  }
+  .filter-bar .input-box { margin-bottom: 0; min-width: 160px; }
+
+  .input-box { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+  .input-box label {
+    font-size: 11px; font-weight: 700;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .input-box input, .input-box select, .input-box textarea {
+    padding: 10px 14px; border: 1px solid var(--border-mid);
+    border-radius: var(--radius-sm); background: var(--bg-surface);
+    color: var(--text-main); font-size: 13px;
+    outline: none; transition: border-color 0.2s; font-family: inherit;
+  }
+  .input-box input:focus, .input-box select:focus, .input-box textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(35, 40, 36, 0.04);
+  }
+
+  /* Tablo */
+  .data-table-wrapper {
+    background: var(--bg-surface); border-radius: var(--radius-md);
+    border: 1px solid var(--border-soft); box-shadow: var(--shadow-blur);
+    overflow-x: auto; margin-bottom: 24px;
+  }
+  .crisp-list-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+  .crisp-list-table th {
+    background: var(--bg-body); color: var(--text-muted);
+    padding: 14px 18px; font-weight: 600;
+    border-bottom: 1px solid var(--border-soft);
+    text-transform: uppercase; font-size: 11px;
+    letter-spacing: 0.5px; white-space: nowrap;
+  }
+  .crisp-list-table td {
+    padding: 14px 18px; border-bottom: 1px solid var(--border-soft);
+    color: var(--text-main); vertical-align: middle;
+  }
+  .crisp-list-table tr:hover td { background-color: var(--row-hover); }
+  .crisp-list-table tr.iptal td { color: var(--text-light); }
+
+  /* Status Pill */
+  .status-pill {
+    padding: 4px 12px; border-radius: 30px;
+    font-size: 11px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+
+  /* Form Card */
+  .ui-card {
+    background: var(--bg-surface); padding: 24px;
+    border-radius: var(--radius-md); border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-blur); margin-bottom: 24px;
+  }
+  .ui-card h3 {
+    font-size: 15px; font-weight: 700; color: var(--primary);
+    margin: 0 0 18px 0; padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .form-grid-2col {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 16px; margin-bottom: 16px;
+  }
+  @media (max-width: 700px) { .form-grid-2col { grid-template-columns: 1fr; } }
+
+  /* Butonlar */
+  .btn {
+    padding: 9px 18px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    border: 1px solid transparent; transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .btn-primary:hover { background: var(--primary-light); }
+  .btn-primary:disabled { background: var(--text-light); cursor: not-allowed; }
+  .btn-outline { background: transparent; color: var(--text-main); border-color: var(--border-mid); }
+  .btn-outline:hover { background: var(--row-hover); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+  .btn-icon-soft {
+    width: 32px; height: 32px; border-radius: 8px;
+    border: 1px solid var(--border-mid); background: var(--bg-surface);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s ease; font-size: 14px;
+  }
+  .btn-icon-soft:hover { background: var(--border-soft); transform: translateY(-1px); }
+  .btn-icon-soft.danger:hover {
+    background: var(--danger-bg); border-color: #E2C9C5; color: var(--danger);
+  }
+
+  /* Stok Seçim Listesi */
+  .stok-secim-box {
+    border: 1px solid var(--border-mid); border-radius: var(--radius-sm);
+    background: var(--bg-surface); max-height: 320px; overflow-y: auto;
+    margin-bottom: 12px;
+  }
+  .stok-secim-item {
+    display: grid;
+    grid-template-columns: 32px 1fr auto;
+    gap: 12px; align-items: center;
+    padding: 10px 14px; border-bottom: 1px solid var(--border-soft);
+    cursor: pointer; transition: background 0.15s;
+  }
+  .stok-secim-item:hover { background: var(--row-hover); }
+  .stok-secim-item.selected { background: rgba(59, 130, 246, 0.06); border-left: 3px solid var(--primary); }
+  .stok-secim-item:last-child { border-bottom: none; }
+
+  .stok-secim-id { font-family: monospace; font-size: 11px; color: var(--primary); font-weight: 700; }
+  .stok-secim-cins { font-size: 13px; font-weight: 600; color: var(--text-main); }
+  .stok-secim-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .stok-secim-miktar {
+    font-family: monospace; font-size: 12px; font-weight: 700;
+    color: var(--primary); white-space: nowrap;
+  }
+
+  .empty-block {
+    text-align: center; padding: 50px 20px;
+    color: var(--text-light); font-size: 13px; font-style: italic;
+  }
+
+  .badge-count {
+    font-size: 11px; font-weight: 700;
+    padding: 4px 10px; background: var(--accent-light);
+    color: var(--accent); border-radius: 20px;
+  }
+</style>
+
+<div x-data="rezApp()" x-init="init()">
+
+  <!-- ═══ MİNİ İSTATİSTİK KARTLARI ═══ -->
+  <div class="rez-stats">
+    <div class="stat-card">
+      <div class="stat-label">Aktif Rezervasyon</div>
+      <div class="stat-val success" x-text="istatistik.aktif"></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">İptal Edilmiş</div>
+      <div class="stat-val danger" x-text="istatistik.iptal"></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Toplam Kayıt</div>
+      <div class="stat-val" x-text="rows.length"></div>
+    </div>
+  </div>
+
+  <!-- ═══ FİLTRE BAR ═══ -->
+  <div class="filter-bar">
+    <div class="input-box">
+      <label>Müşteri</label>
+      <select x-model="filtre.musteri">
+        <option value="">Tümü</option>
+        <template x-for="m in musteriListesi" :key="m"><option :value="m" x-text="m"></option></template>
+      </select>
+    </div>
+    <div class="input-box">
+      <label>Stok Tipi</label>
+      <select x-model="filtre.stok_tip">
+        <option value="">Tümü</option>
+        <option value="BLOK">BLOK</option>
+        <option value="PLAKA">PLAKA</option>
+        <option value="EBATLI">EBATLI</option>
+      </select>
+    </div>
+    <div class="input-box">
+      <label>Cins</label>
+      <select x-model="filtre.cins">
+        <option value="">Tümü</option>
+        <template x-for="c in filtreSecenek.cins" :key="c"><option :value="c" x-text="c"></option></template>
+      </select>
+    </div>
+    <div class="input-box">
+      <label>Yüzey İşlem</label>
+      <select x-model="filtre.ozellik">
+        <option value="">Tümü</option>
+        <template x-for="o in filtreSecenek.ozellik" :key="o"><option :value="o" x-text="o"></option></template>
+      </select>
+    </div>
+    <div class="input-box">
+      <label>Blok No</label>
+      <select x-model="filtre.blok_no">
+        <option value="">Tümü</option>
+        <template x-for="b in filtreSecenek.blok_no" :key="b"><option :value="b" x-text="b"></option></template>
+      </select>
+    </div>
+    <div class="input-box">
+      <label>Durum</label>
+      <select x-model="filtre.durum">
+        <option value="">Tümü</option>
+        <option value="aktif">Aktif</option>
+        <option value="iptal">İptal</option>
+      </select>
+    </div>
+    <div class="input-box" style="flex:1; min-width:200px">
+      <label>Arama (Stok ID, Sipariş)</label>
+      <input type="text" x-model="filtre.arama" placeholder="REZ-..., SIP-..., BLK-...">
+    </div>
+  </div>
+
+  <!-- ═══ ANA TABLO ═══ -->
+  <div class="data-table-wrapper">
+    <table class="crisp-list-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Müşteri</th>
+          <th>Stok Tipi</th>
+          <th>Bağlı Stok ID</th>
+          <th>Sipariş Ref</th>
+          <th>Cins</th>
+          <th>Yüzey</th>
+          <th>Blok No</th>
+          <th>Ölçü</th>
+          <th>Durum</th>
+          <th style="text-align:right; padding-right:24px;">İşlem</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="r in filtreliRows" :key="r.id">
+          <tr :class="r.iptal_nedeni ? 'iptal' : ''">
+            <td style="font-family:monospace; font-weight:700; color:var(--primary);" x-text="r.id"></td>
+            <td style="font-weight:600;" x-text="r.musteri"></td>
+            <td>
+              <span class="status-pill" style="background:var(--bg-body); color:var(--text-main);" x-text="r.stok_tip"></span>
+            </td>
+            <td style="font-family:monospace; font-size:12px;" x-text="r.stok_id"></td>
+            <td style="font-family:monospace; font-size:12px; color:var(--text-muted)" x-text="r.siparis_id || '—'"></td>
+            <td x-text="r.cins || '—'"></td>
+            <td x-text="r.ozellik || '—'"></td>
+            <td style="font-family:monospace; font-size:12px;" x-text="r.blok_no || '—'"></td>
+            <td style="font-size:12px;" x-text="rezOlcu(r)"></td>
+            <td>
+              <span class="status-pill"
+                    :style="r.iptal_nedeni
+                            ? 'background:var(--danger-bg); color:var(--danger)'
+                            : 'background:var(--success-bg); color:var(--success)'"
+                    x-text="r.iptal_nedeni ? 'İptal' : 'Aktif'"></span>
+            </td>
+            <td style="text-align:right; padding-right:24px;">
+              <template x-if="!r.iptal_nedeni">
+                <button class="btn-icon-soft danger" @click="rezIptalEt(r)" title="Rezervasyonu İptal Et"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></button>
+              </template>
+              <template x-if="r.iptal_nedeni">
+                <span style="font-size:11px; color:var(--text-light); font-style:italic;" :title="r.iptal_nedeni">—</span>
+              </template>
+            </td>
+          </tr>
+        </template>
+        <tr x-show="filtreliRows.length === 0">
+          <td colspan="8" class="empty-block">Filtreye uygun rezervasyon bulunmuyor.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══ YENİ REZERVASYON KARTI ═══ -->
+  <div class="ui-card">
+    <h3>Yeni Rezervasyon Tanımla</h3>
+
+    <div class="form-grid-2col">
+      <div class="input-box">
+        <label>Müşteri *</label>
+        <select x-model="form.musteri">
+          <option value="">Seçin</option>
+          <template x-for="m in musteriListesi" :key="m"><option :value="m" x-text="m"></option></template>
+        </select>
+      </div>
+      <div class="input-box">
+        <label>Sipariş Bağlantısı (Opsiyonel)</label>
+        <select x-model="form.siparis_id" @change="siparisSecildi()">
+          <option value="">— Bağımsız Rezervasyon —</option>
+          <template x-for="s in musteriSiparisListesi" :key="s.id">
+            <option :value="s.id" x-text="s.id + ' · ' + (s.cins || '?') + ' · ' + (s.urun_tip || '?')"></option>
+          </template>
+        </select>
+      </div>
+      <div class="input-box">
+        <label>Stok Tipi *</label>
+        <select x-model="stokFiltre.tip" @change="stokListele()">
+          <option value="BLOK">BLOK</option>
+          <option value="PLAKA">PLAKA</option>
+          <option value="EBATLI">EBATLI</option>
+        </select>
+      </div>
+      <div class="input-box">
+        <label>Cins (Filtre)</label>
+        <select x-model="stokFiltre.cins">
+          <option value="">Tüm Cinsler</option>
+          <template x-for="c in stokFiltreSecenek.cins" :key="c">
+            <option :value="c" x-text="c"></option>
+          </template>
+        </select>
+      </div>
+      <div class="input-box" x-show="stokFiltre.tip !== 'BLOK'">
+        <label>Yüzey İşlem (Filtre)</label>
+        <select x-model="stokFiltre.ozellik">
+          <option value="">Tüm Yüzeyler</option>
+          <template x-for="o in stokFiltreSecenek.ozellik" :key="o">
+            <option :value="o" x-text="o"></option>
+          </template>
+        </select>
+      </div>
+      <div class="input-box" x-show="stokFiltre.tip !== 'EBATLI'">
+        <label>Blok No (Filtre)</label>
+        <select x-model="stokFiltre.blok_no">
+          <option value="">Tüm Bloklar</option>
+          <template x-for="b in stokFiltreSecenek.blok_no" :key="b">
+            <option :value="b" x-text="b"></option>
+          </template>
+        </select>
+      </div>
+      <div class="input-box" x-show="stokFiltre.tip === 'EBATLI'">
+        <label>Ölçü (Filtre)</label>
+        <select x-model="stokFiltre.olcu">
+          <option value="">Tüm Ölçüler</option>
+          <template x-for="o in stokFiltreSecenek.olcu" :key="o">
+            <option :value="o" x-text="o"></option>
+          </template>
+        </select>
+      </div>
+    </div>
+
+    <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px; flex-wrap:wrap;">
+      <label style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">
+        Stok Seçimi
+      </label>
+      <button type="button" class="btn btn-outline btn-sm" @click="stokHepsiniSec()">Görünenleri Seç</button>
+      <button type="button" class="btn btn-outline btn-sm" @click="secilenStoklar = []">Seçimi Temizle</button>
+      <span class="badge-count" x-text="secilenStoklar.length + ' stok seçildi'"></span>
+    </div>
+
+    <div class="stok-secim-box">
+      <template x-for="s in stokListesi" :key="s.id">
+        <div class="stok-secim-item"
+             :class="{'selected': secilenStoklar.includes(s.id)}"
+             @click="stokToggle(s.id)">
+          <input type="checkbox" :checked="secilenStoklar.includes(s.id)" style="margin:0;">
+          <div>
+            <div class="stok-secim-id" x-text="s.id"></div>
+            <div class="stok-secim-cins" x-text="(s.cins || '?') + (s.ozellik ? ' · ' + s.ozellik : '')"></div>
+            <div class="stok-secim-meta">
+              <span x-text="(s.blok_no || s.kasa_no || '') + ' · '"></span>
+              <span x-text="((s.boy || '') + 'x' + (s.yukseklik || '')) + (s.kalinlik ? 'x' + s.kalinlik : '')"></span>
+            </div>
+          </div>
+          <div class="stok-secim-miktar">
+            <span x-text="fmt3(s.m2 || s.tonaj || s.hacim || 0) + ' ' + (stokFiltre.tip === 'BLOK' ? 'ton' : 'm²')"></span>
+          </div>
+        </div>
+      </template>
+      <div x-show="stokListesi.length === 0" class="empty-block">
+        Bu kriterlere uygun serbest stok bulunmuyor.
+      </div>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+      <button x-show="seciliIds.length > 0" @click="seciliSil()" class="btn btn-danger" style="font-size:12px; padding:6px 14px;">Seçiliyi Sil (<span x-text="seciliIds.length"></span>)</button>
+          <button class="btn btn-primary" @click="kaydet()" :disabled="!form.musteri || secilenStoklar.length === 0">
+        Blokajı Onayla (<span x-text="secilenStoklar.length"></span>)
+      </button>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function rezApp() {
+  return {
+    rows: [],
+      seciliIds: [],
+      tumSecili: false,
+    form: { musteri: '', siparis_id: '' },
+    stokTamListe: [],
+    secilenStoklar: [],
+    stokFiltre: { tip: 'PLAKA', cins: '', ozellik: '', blok_no: '', olcu: '' },
+    filtre: { musteri: '', stok_tip: '', durum: '', arama: '', cins: '', ozellik: '', blok_no: '' },
+    musteriListesi: [],
+    tumSiparisler: [],
+
+    fmt3(n) {
+      const v = parseFloat(n) || 0;
+      return v.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+    },
+
+    rezOlcu(r) {
+      // Stok tipine göre ölçüyü okunabilir biçimde döndür
+      const parts = [];
+      if (r.boy) parts.push(r.boy);
+      if (r.yukseklik) parts.push(r.yukseklik);
+      if (r.en) parts.push(r.en);
+      else if (r.kalinlik) parts.push(r.kalinlik);
+      return parts.length ? parts.join('×') + ' cm' : '—';
+    },
+
+    async init() {
+      try {
+        this.musteriListesi = await fetch('/api/musteri').then(r => r.json()) || [];
+      } catch(e) { console.warn('Müşteri listesi yüklenemedi'); }
+
+      try {
+        const resp = await fetch('/api/siparis?per_page=500').then(r => r.json());
+        this.tumSiparisler = resp.data || resp || [];
+      } catch(e) { console.warn('Sipariş listesi yüklenemedi'); }
+
+      await this.listele();
+      await this.stokListele();
+    },
+
+    async listele() {
+      try {
+        const data = await fetch('/api/rezervasyon').then(r => r.json());
+        this.rows = data || [];
+      } catch(e) {
+        Utils.error('Rezervasyon listesi yüklenemedi: ' + e.message);
+        this.rows = [];
+      }
+    },
+
+    async stokListele() {
+      // Stok tipi değişince cins/yüzey/blok/ölçü filtrelerini sıfırla (boş liste olmasın)
+      this.stokFiltre.cins = '';
+      this.stokFiltre.ozellik = '';
+      this.stokFiltre.blok_no = '';
+      this.stokFiltre.olcu = '';
+      try {
+        const p = new URLSearchParams({
+          tip: this.stokFiltre.tip,
+          durum: 'Serbest',
+          per_page: 500
+        });
+        const data = await fetch('/api/stok?' + p).then(r => r.json());
+        this.stokTamListe = data.data || data || [];
+        this.secilenStoklar = [];
+      } catch(e) {
+        Utils.error('Stok listesi yüklenemedi: ' + e.message);
+        this.stokTamListe = [];
+      }
+    },
+
+    get stokListesi() {
+      let liste = this.stokTamListe;
+      if (this.stokFiltre.cins) {
+        liste = liste.filter(s => s.cins === this.stokFiltre.cins);
+      }
+      if (this.stokFiltre.ozellik) {
+        liste = liste.filter(s => s.ozellik === this.stokFiltre.ozellik);
+      }
+      if (this.stokFiltre.blok_no) {
+        liste = liste.filter(s => s.blok_no === this.stokFiltre.blok_no);
+      }
+      if (this.stokFiltre.olcu) {
+        liste = liste.filter(s => this.stokOlcuStr(s) === this.stokFiltre.olcu);
+      }
+      return liste;
+    },
+
+    get stokFiltreSecenek() {
+      const cins = new Set(), ozellik = new Set(), blok_no = new Set(), olcu = new Set();
+      this.stokTamListe.forEach(s => {
+        if (s.cins) cins.add(s.cins);
+        if (s.ozellik) ozellik.add(s.ozellik);
+        if (s.blok_no) blok_no.add(s.blok_no);
+        const o = this.stokOlcuStr(s);
+        if (o) olcu.add(o);
+      });
+      return {
+        cins: [...cins].sort(),
+        ozellik: [...ozellik].sort(),
+        blok_no: [...blok_no].sort(),
+        olcu: [...olcu].sort()
+      };
+    },
+
+    stokOlcuStr(s) {
+      // Stok ölçüsünü tek string olarak döndür (filtre eşleştirme + gösterim)
+      const parts = [];
+      if (s.boy) parts.push(s.boy);
+      if (s.yukseklik) parts.push(s.yukseklik);
+      if (s.kalinlik) parts.push(s.kalinlik);
+      else if (s.en) parts.push(s.en);
+      return parts.length ? parts.join('x') : '';
+    },
+
+    stokToggle(id) {
+      const idx = this.secilenStoklar.indexOf(id);
+      if (idx >= 0) this.secilenStoklar.splice(idx, 1);
+      else this.secilenStoklar.push(id);
+    },
+
+    stokHepsiniSec() {
+      this.secilenStoklar = this.stokListesi.map(s => s.id);
+    },
+
+    get musteriSiparisListesi() {
+      if (!this.form.musteri) return [];
+      return this.tumSiparisler.filter(s =>
+        s.musteri === this.form.musteri &&
+        !['Teslim Edildi', 'Iptal Edildi'].includes(s.durum)
+      );
+    },
+
+    siparisSecildi() {
+      // Sipariş seçildiyse stok tipi otomatik ayarlansın
+      if (this.form.siparis_id) {
+        const sip = this.tumSiparisler.find(s => s.id === this.form.siparis_id);
+        if (sip && sip.urun_tip) {
+          this.stokFiltre.tip = sip.urun_tip;
+          if (sip.cins) this.stokFiltre.cins = sip.cins;
+          this.stokListele();
+        }
+      }
+    },
+
+    get filtreSecenek() {
+      // Mevcut rezervasyon verisinden benzersiz cins/özellik/blok no listeleri
+      const cins = [...new Set(this.rows.map(r => r.cins).filter(Boolean))].sort();
+      const ozellik = [...new Set(this.rows.map(r => r.ozellik).filter(Boolean))].sort();
+      const blok_no = [...new Set(this.rows.map(r => r.blok_no).filter(Boolean))].sort();
+      return { cins, ozellik, blok_no };
+    },
+
+    get filtreliRows() {
+      let liste = this.rows;
+      if (this.filtre.musteri) liste = liste.filter(r => r.musteri === this.filtre.musteri);
+      if (this.filtre.stok_tip) liste = liste.filter(r => r.stok_tip === this.filtre.stok_tip);
+      if (this.filtre.cins) liste = liste.filter(r => r.cins === this.filtre.cins);
+      if (this.filtre.ozellik) liste = liste.filter(r => r.ozellik === this.filtre.ozellik);
+      if (this.filtre.blok_no) liste = liste.filter(r => r.blok_no === this.filtre.blok_no);
+      if (this.filtre.durum === 'aktif') liste = liste.filter(r => !r.iptal_nedeni);
+      else if (this.filtre.durum === 'iptal') liste = liste.filter(r => !!r.iptal_nedeni);
+      if (this.filtre.arama) {
+        const t = this.filtre.arama.toLowerCase();
+        liste = liste.filter(r =>
+          (r.id || '').toLowerCase().includes(t) ||
+          (r.stok_id || '').toLowerCase().includes(t) ||
+          (r.siparis_id || '').toLowerCase().includes(t) ||
+          (r.musteri || '').toLowerCase().includes(t) ||
+          (r.blok_no || '').toLowerCase().includes(t)
+        );
+      }
+      return liste;
+    },
+
+    get istatistik() {
+      return {
+        aktif: this.rows.filter(r => !r.iptal_nedeni).length,
+        iptal: this.rows.filter(r => !!r.iptal_nedeni).length
+      };
+    },
+
+    async kaydet() {
+      if (!this.form.musteri) { Utils.error('Müşteri zorunlu'); return; }
+      if (this.secilenStoklar.length === 0) { Utils.error('En az bir stok seçin'); return; }
+
+      try {
+        const body = {
+          musteri: this.form.musteri,
+          stok_tip: this.stokFiltre.tip,
+          stok_idler: this.secilenStoklar
+        };
+        if (this.form.siparis_id) body.siparis_id = this.form.siparis_id;
+
+        const r = await fetch('/api/rezervasyon', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        }).then(r => r.json());
+
+        if (r.ok) {
+          Utils.success(r.mesaj || (this.secilenStoklar.length + ' stok rezerve edildi'));
+          this.form = { musteri: '', siparis_id: '' };
+          this.secilenStoklar = [];
+          await this.listele();
+          await this.stokListele();
+        } else {
+          Utils.error(r.mesaj || 'Rezervasyon başarısız');
+        }
+      } catch(e) {
+        Utils.error('Hata: ' + e.message);
+      }
+    },
+
+    async rezIptalEt(r) {
+      if (!(await Utils.confirm(
+        'Bu rezervasyon iptal edilecek:\n\n' +
+        '• Müşteri: ' + r.musteri + '\n' +
+        '• Stok: ' + r.stok_id + ' (' + r.stok_tip + ')' +
+        (r.siparis_id ? '\n• Sipariş: ' + r.siparis_id : '') + '\n\n' +
+        'Rezerve durumdaki stok otomatik Serbest yapılacak.\nDevam edilsin mi?'
+      ))) return;
+
+      try {
+        const res = await fetch('/api/rezervasyon/' + r.id, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ neden: 'Manuel iptal' })
+        }).then(r => r.json());
+
+        if (res.ok) {
+          Utils.success(res.mesaj || 'Rezervasyon iptal edildi');
+          await this.listele();
+          await this.stokListele();
+        } else {
+          Utils.error(res.mesaj || 'İptal başarısız');
+        }
+      } catch(e) {
+        Utils.error('Hata: ' + e.message);
+      }
+    },
+  toggleTumunuSec(val) {
+      this.tumSecili = val;
+      this.seciliIds = val ? this.rows.map(r => r.id) : [];
+    },
+
+    async seciliSil() {
+      if (this.seciliIds.length === 0) return;
+      const onay = await Utils.confirmSil('Rezervasyonları İptal Et', {
+        mesaj: `Seçili ${this.seciliIds.length} adet rezervasyon iptal edilecek.`,
+        detail: 'İptal edilen rezervasyonlarda stoklar Serbest duruma çekilir.',
+      });
+      if (!onay) return;
+      let silinen = 0, hata = 0;
+      for (const id of this.seciliIds) {
+        try {
+          const r = await fetch('/api/rezervasyon/' + id, { method: 'DELETE' }).then(r=>r.json());
+          if (r.ok) silinen++; else hata++;
+        } catch(e) { hata++; }
+      }
+      if (silinen > 0) Utils.success(silinen + ' rezervasyon iptal edildi' + (hata > 0 ? `, ${hata} işlenemedi` : ''));
+      if (hata > 0 && silinen === 0) Utils.error(hata + ' rezervasyon işlenemedi');
+      this.seciliIds = [];
+      this.tumSecili = false;
+      await this.listele();
+    },
+  };
+}
+</script>
+{% endblock %}

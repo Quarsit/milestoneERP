@@ -1,0 +1,1022 @@
+{% extends "base.html" %}
+{% block title %}Ayarlar{% endblock %}
+{% block header_title %}Sistem Ayarları{% endblock %}
+{% block content %}
+<style>
+  /* ════════════════════════════════════════════════════
+     AYARLAR — LIGHT LUXURY TASARIM
+     ════════════════════════════════════════════════════ */
+
+  /* Tab bar */
+  .ayarlar-tab-bar {
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 24px; flex-wrap: wrap;
+    background: var(--bg-surface); padding: 12px 20px;
+    border-radius: var(--radius-lg, var(--radius-md));
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-blur);
+  }
+  .ayarlar-tab-btn {
+    padding: 10px 20px; border-radius: var(--radius-md);
+    font-weight: 600; font-size: 13px; cursor: pointer;
+    border: 1px solid transparent; background: transparent;
+    color: var(--text-muted); transition: all 0.2s ease;
+    font-family: inherit;
+  }
+  .ayarlar-tab-btn:hover { color: var(--primary); background: var(--bg-body); }
+  .ayarlar-tab-btn.active {
+    background: var(--primary); color: white;
+    box-shadow: var(--shadow-blur);
+    border-color: var(--primary-light);
+  }
+
+  /* Lookup split */
+  .lookup-grid-layout {
+    display: grid; grid-template-columns: 280px 1fr; gap: 24px;
+  }
+  @media (max-width: 900px) { .lookup-grid-layout { grid-template-columns: 1fr; } }
+
+  .lookup-sidebar {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg, var(--radius-md));
+    overflow: hidden; height: fit-content;
+    box-shadow: var(--shadow-blur);
+  }
+  .lookup-sidebar-header {
+    padding: 18px 24px; background: var(--bg-body);
+    border-bottom: 1px solid var(--border-soft);
+    font-weight: 700; font-size: 14px;
+    color: var(--primary); letter-spacing: -0.3px;
+  }
+  .lookup-menu-list { max-height: 60vh; overflow-y: auto; }
+  .lookup-menu-item {
+    padding: 14px 24px; border-bottom: 1px solid var(--border-soft);
+    cursor: pointer; display: flex; justify-content: space-between;
+    align-items: center; transition: all 0.2s ease;
+    font-size: 13px; color: var(--text-muted); font-weight: 500;
+  }
+  .lookup-menu-item:hover { background: var(--bg-body); color: var(--primary); }
+  .lookup-menu-item.active {
+    background: rgba(35, 40, 36, 0.04);
+    border-left: 4px solid var(--primary);
+    color: var(--primary); font-weight: 700;
+  }
+
+  .badge-count {
+    background: var(--border-mid); color: var(--text-main);
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+  }
+  .lookup-menu-item.active .badge-count { background: var(--primary); color: white; }
+
+  /* Content panel */
+  .content-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg, var(--radius-md));
+    padding: 28px; box-shadow: var(--shadow-blur);
+  }
+  .content-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 24px; padding-bottom: 16px;
+    border-bottom: 1px solid var(--border-soft);
+    flex-wrap: wrap; gap: 12px;
+  }
+  .content-header h3 {
+    margin: 0; font-size: 18px;
+    color: var(--primary); font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  /* Tablolar */
+  .crisp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .crisp-table th {
+    background: var(--bg-body); font-size: 11px;
+    font-weight: 700; color: var(--text-muted);
+    text-transform: uppercase; padding: 14px 20px;
+    text-align: left; border-bottom: 1px solid var(--border-soft);
+    letter-spacing: 0.5px; white-space: nowrap;
+  }
+  .crisp-table td {
+    padding: 14px 20px; vertical-align: middle;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text-main);
+  }
+  .crisp-table tr:hover { background-color: var(--row-hover); }
+
+  .data-bold { font-weight: 600; color: var(--primary); }
+
+  .badge-label {
+    font-family: monospace; font-weight: 700;
+    font-size: 12px; padding: 4px 10px;
+    border-radius: 6px; display: inline-block;
+  }
+  .badge-blue  { background: var(--info-bg); color: var(--info); border: 1px solid #C4D2E6; }
+  .badge-green { background: var(--success-bg); color: var(--success); border: 1px solid #CBD6CC; }
+  .badge-red   { background: var(--danger-bg); color: var(--danger); border: 1px solid #E2C9C5; }
+
+  /* Aksiyon butonları */
+  .tbl-action-group { display: flex; gap: 8px; justify-content: flex-end; }
+  .btn-icon-soft {
+    width: 32px; height: 32px; border-radius: 8px;
+    border: 1px solid var(--border-mid); background: var(--bg-surface);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s ease; font-size: 14px;
+    text-decoration: none; color: var(--text-main);
+  }
+  .btn-icon-soft:hover { background: var(--bg-body); transform: translateY(-1px); box-shadow: var(--shadow-blur); }
+  .btn-icon-soft.danger:hover { background: var(--danger-bg); border-color: #E2C9C5; color: var(--danger); }
+  .btn-icon-soft svg { width: 15px; height: 15px; stroke-width: 1.8; }
+
+  /* Butonlar */
+  .btn-action {
+    padding: 10px 20px; font-size: 13px; font-weight: 600;
+    border-radius: var(--radius-sm); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px; transition: all 0.2s; border: 1px solid transparent;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+  .btn-primary:hover { background: var(--primary-light); box-shadow: var(--shadow-blur); transform: translateY(-1px); }
+  .btn-primary:disabled { background: var(--text-light); cursor: not-allowed; opacity: 0.6; }
+  .btn-outline { background: var(--bg-surface); color: var(--text-main); border-color: var(--border-mid); }
+  .btn-outline:hover { background: var(--bg-body); border-color: var(--primary); }
+
+  /* Info banner */
+  .info-banner {
+    background: var(--info-bg); border: 1px solid #C4D2E6;
+    border-radius: var(--radius-sm); padding: 12px 16px;
+    margin-bottom: 24px; font-size: 13px; color: var(--info);
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  /* Formlar */
+  .form-col-2 {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  }
+  @media (max-width: 600px) { .form-col-2 { grid-template-columns: 1fr; } }
+  .input-box { margin-bottom: 16px; }
+  .input-box label {
+    display: block; font-size: 12px;
+    font-weight: 600; color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+  .input-box input, .input-box select, .input-box textarea {
+    width: 100%; padding: 10px 14px;
+    border: 1px solid var(--border-mid);
+    border-radius: var(--radius-sm); font-size: 13px;
+    transition: all 0.2s; outline: none;
+    background: var(--bg-surface); color: var(--text-main);
+    font-family: inherit;
+  }
+  .input-box input:focus, .input-box select:focus, .input-box textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(35, 40, 36, 0.05);
+  }
+
+  /* Modal */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(35, 40, 36, .55);
+    z-index: 200; display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(3px);
+  }
+  .modal-viewport-box {
+    background: var(--bg-surface); border-radius: var(--radius-md);
+    width: 95vw; max-height: 90vh;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .modal-top-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 24px; border-bottom: 1px solid var(--border-soft);
+    flex-shrink: 0;
+  }
+  .modal-form-body { padding: 24px; overflow-y: auto; flex: 1; }
+  .modal-bottom-bar {
+    display: flex; gap: 10px; justify-content: flex-end;
+    padding: 16px 24px; border-top: 1px solid var(--border-soft);
+    flex-shrink: 0; background: var(--bg-body);
+  }
+
+  /* Yetki radio butonları (renkleri ileride özelleştir) */
+  .yetki-radio-label {
+    padding: 6px 10px; border-radius: 4px;
+    font-size: 11px; font-weight: 600; cursor: pointer;
+    background: var(--bg-surface); border: 1px solid var(--border-mid);
+    color: var(--text-muted); transition: all 0.15s;
+  }
+  .yetki-radio-label.gizli-active { background: var(--danger-bg); color: var(--danger); border-color: #E2C9C5; }
+  .yetki-radio-label.okuma-active { background: var(--warn-bg); color: #8A6D1B; border-color: #E8DCB0; }
+  .yetki-radio-label.yazma-active { background: var(--success-bg); color: var(--success); border-color: #CBD6CC; }
+</style>
+
+<div x-data="ayarlarApp()" x-init="init()">
+
+  <!-- ═══ SEKME BUTONLARI ═══ -->
+  <div class="ayarlar-tab-bar">
+    <button @click="sekme='lookup'" :class="sekme=='lookup' ? 'ayarlar-tab-btn active' : 'ayarlar-tab-btn'">Tanımlar (Sistem Verisi)</button>
+    <button @click="sekme='banka'; bankaListele()" :class="sekme=='banka' ? 'ayarlar-tab-btn active' : 'ayarlar-tab-btn'">Banka &amp; Finans</button>
+    <button @click="sekme='vergi'; vergiAyariYukle()" :class="sekme=='vergi' ? 'ayarlar-tab-btn active' : 'ayarlar-tab-btn'">Vergi Yönetimi</button>
+    <button @click="sekme='kullanici'" :class="sekme=='kullanici' ? 'ayarlar-tab-btn active' : 'ayarlar-tab-btn'" x-show="isAdmin">Kullanıcı ve Yetkiler</button>
+    <button @click="sekme='yedek'; yedekListele()" :class="sekme=='yedek' ? 'ayarlar-tab-btn active' : 'ayarlar-tab-btn'" x-show="isAdmin">Sistem Yedekleme</button>
+  </div>
+
+  <!-- ════════════════ LOOKUP SEKMESİ ════════════════ -->
+  <div x-show="sekme=='lookup'">
+    <div class="lookup-grid-layout">
+      <!-- Kategori Sidebar -->
+      <div class="lookup-sidebar">
+        <div class="lookup-sidebar-header">Veri Kategorileri</div>
+        <div class="lookup-menu-list">
+          <template x-for="kat in kategoriler" :key="kat.id">
+            <div @click="secilenKat = kat.id; secilenKatAdi = kat.label; loadKat()"
+                 class="lookup-menu-item"
+                 :class="{'active': secilenKat == kat.id}">
+              <span x-text="kat.label"></span>
+              <span class="badge-count" x-text="kat.count"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- İçerik Paneli -->
+      <div class="content-panel">
+        <div class="content-header">
+          <h3 x-text="secilenKatAdi ? secilenKatAdi + ' Listesi' : 'Kategori Seçin'"></h3>
+          <button class="btn-action btn-primary" @click="modalEkle = true" x-show="secilenKat && isAdmin">+ Yeni Veri Ekle</button>
+        </div>
+        <div style="overflow-x: auto;">
+          <table class="crisp-table">
+            <thead>
+              <tr>
+                <th>Veri Değeri</th>
+                <th>Sistem Kısaltması</th>
+                <th style="text-align: right; width: 120px;">İşlemler</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="r in katRows" :key="r.id">
+                <tr>
+                  <td class="data-bold" x-text="r.deger"></td>
+                  <td><span class="badge-label badge-blue" x-text="r.kisaltma || '—'"></span></td>
+                  <td>
+                    <div class="tbl-action-group">
+                      <button class="btn-icon-soft" @click="duzenleAc(r)" title="Düzenle" x-show="isAdmin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
+                      <button class="btn-icon-soft danger" @click="sil(r)" title="Sil" x-show="isAdmin"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+              <tr x-show="katRows.length === 0">
+                <td colspan="3" style="text-align:center; padding:40px; color:var(--text-light);">Bu kategoride kayıt bulunmuyor.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ BANKA HESAPLARI ════════════════ -->
+  <div x-show="sekme=='banka'" x-cloak class="content-panel">
+    <div class="content-header">
+      <h3>Kurumsal Banka Hesapları</h3>
+      <button class="btn-action btn-primary" @click="bankaYeniAc()">+ Yeni Banka Tanımla</button>
+    </div>
+    <div class="info-banner">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+      <span>Proforma ve fatura çıktılarında ödeme bilgisi olarak bu listedeki hesaplar yer alır. "Varsayılan" seçilen hesap belgelere otomatik basılır.</span>
+    </div>
+    <div style="overflow-x: auto;">
+      <table class="crisp-table">
+        <thead>
+          <tr>
+            <th>Banka Unvanı</th>
+            <th>Şube</th>
+            <th>Uluslararası IBAN</th>
+            <th>SWIFT / BIC</th>
+            <th style="text-align:center;">Para Birimi</th>
+            <th style="text-align:center;">Durum</th>
+            <th style="text-align:right;">İşlemler</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="b in bankalar" :key="b.id">
+            <tr>
+              <td class="data-bold" x-text="b.banka_adi"></td>
+              <td x-text="b.sube || '—'"></td>
+              <td style="font-family:monospace; color:var(--text-muted);" x-text="b.iban || '—'"></td>
+              <td style="font-family:monospace;" x-text="b.swift || '—'"></td>
+              <td style="text-align:center;"><span class="badge-label badge-blue" x-text="b.doviz"></span></td>
+              <td style="text-align:center;">
+                <span x-show="b.varsayilan" class="badge-label badge-green">★ Varsayılan</span>
+              </td>
+              <td>
+                <div class="tbl-action-group">
+                  <button class="btn-icon-soft" @click="bankaDuzenleAc(b)" title="Düzenle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
+                  <button class="btn-icon-soft danger" @click="bankaSil(b)" title="Sil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                </div>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="bankalar.length === 0">
+            <td colspan="7" style="text-align:center; padding:40px; color:var(--text-light);">Finansal hesap tanımı bulunmuyor.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════ VERGİ AYARLARI ════════════════ -->
+  <div x-show="sekme=='vergi'" x-cloak class="content-panel" style="max-width: 600px;">
+    <div class="content-header"><h3>Mali Vergi Oranları</h3></div>
+    <div class="info-banner"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> <span>Sistemde oluşturulan yurt içi (dahili) satış ve alış belgeleri ile proformalarda baz alınacak standart Katma Değer Vergisi yüzdesi.</span></div>
+    <div class="input-box" style="margin-top: 24px;">
+      <label>Varsayılan KDV Oranı (%) *</label>
+      <input type="number" step="0.01" min="0" max="100"
+             x-model.number="vergiForm.varsayilan_kdv"
+             style="font-size: 18px; font-weight: 700; color: var(--primary);">
+      <div style="font-size:11px; color:var(--text-light); margin-top:6px;">
+        Güncel mevzuat uyarınca geçerli oranı giriniz (Örn: 20)
+      </div>
+    </div>
+    <button class="btn-action btn-primary" style="margin-top: 12px; width: 100%;" @click="vergiAyariKaydet()">
+      Sistem KDV Oranını Güncelle
+    </button>
+  </div>
+
+  <!-- ════════════════ KULLANICI YÖNETİMİ ════════════════ -->
+  <div x-show="sekme=='kullanici' && isAdmin" x-cloak class="content-panel">
+    <div class="content-header">
+      <h3>Sistem Kullanıcıları ve Yetkilendirme</h3>
+      <button class="btn-action btn-primary" @click="kullaniciEkleModalAc()">+ Kullanıcı Oluştur</button>
+    </div>
+    <div style="overflow-x: auto;">
+      <table class="crisp-table">
+        <thead>
+          <tr>
+            <th>Kullanıcı Adı</th>
+            <th>Yetki Rolü</th>
+            <th>Erişim Durumu</th>
+            <th>Sisteme Kayıt Tarihi</th>
+            <th style="text-align: right;">Aksiyon</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="k in kullanicilar" :key="k.id">
+            <tr>
+              <td class="data-bold" x-text="k.ad"></td>
+              <td><span class="badge-label" :class="k.rol == 'ADMIN' ? 'badge-blue' : 'badge-green'" x-text="k.rol"></span></td>
+              <td><span class="badge-label" :class="k.aktif ? 'badge-green' : 'badge-red'" x-text="k.aktif ? 'Erişim Açık' : 'Askıya Alındı'"></span></td>
+              <td style="color:var(--text-muted);" x-text="k.olusturma || '—'"></td>
+              <td>
+                <div class="tbl-action-group">
+                  <button class="btn-icon-soft" @click="kullaniciDuzenleAc(k)" title="Ayarları Düzenle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+                  <button class="btn-icon-soft danger" @click="kullaniciSil(k.id, k.ad)" title="Sil" x-show="k.ad !== 'admin'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                </div>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="kullanicilar.length === 0">
+            <td colspan="5" style="text-align:center; padding:40px; color:var(--text-light);">Sistem kullanıcısı bulunmuyor.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════ YEDEKLEME ════════════════ -->
+  <div x-show="sekme=='yedek'" x-cloak class="content-panel">
+    <div class="content-header">
+      <h3>Veritabanı Arşivi ve Sistem Yedekleri</h3>
+      <div style="display:flex; gap:10px;">
+        <button class="btn-action btn-outline" @click="yedekTani()">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          Sistem Durumu
+        </button>
+        <button class="btn-action btn-primary" @click="yedekAl()" :disabled="yedekIslem">
+          <span x-show="!yedekIslem"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Acil Manuel Yedek Al</span>
+          <span x-show="yedekIslem">Yedek Oluşturuluyor...</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- TANI / DURUM PANELİ -->
+    <div x-show="yedekTaniSonuc" x-cloak class="info-banner"
+         :style="yedekTaniSonuc && yedekTaniSonuc.pg_dump_bulundu && yedekTaniSonuc.baglanti_ok ? 'background:var(--success-bg); border-color:#A8D8CC; color:var(--success);' : 'background:var(--danger-bg); border-color:#E6BBB5; color:var(--danger);'"
+         style="margin-bottom:14px;">
+      <template x-if="yedekTaniSonuc">
+        <div style="font-size:13px; line-height:1.7;">
+          <div style="font-weight:700; margin-bottom:6px;" x-text="yedekTaniSonuc.mesaj"></div>
+          <div>• pg_dump (yedek aracı): <strong x-text="yedekTaniSonuc.pg_dump_bulundu ? '✓ bulundu' : '✗ BULUNAMADI'"></strong>
+            <span x-show="yedekTaniSonuc.pg_dump_yol" style="font-family:monospace; font-size:11px; opacity:0.8;" x-text="'(' + yedekTaniSonuc.pg_dump_yol + ')'"></span>
+          </div>
+          <div>• pg_restore (geri yükleme aracı): <strong x-text="yedekTaniSonuc.pg_restore_bulundu ? '✓ bulundu' : '✗ BULUNAMADI'"></strong></div>
+          <div>• Veritabanı bağlantısı: <strong x-text="yedekTaniSonuc.baglanti_ok ? '✓ ' + yedekTaniSonuc.db_bilgisi : '✗ çözülemedi'"></strong></div>
+          <div>• Yedek klasörü: <strong x-text="yedekTaniSonuc.backup_dir_var ? '✓ var' : 'oluşturulacak'"></strong>
+            <span style="font-family:monospace; font-size:11px; opacity:0.8;" x-text="'(' + yedekTaniSonuc.backup_dir + ')'"></span>
+          </div>
+          <div x-show="!yedekTaniSonuc.pg_dump_bulundu" style="margin-top:8px; padding-top:8px; border-top:1px solid currentColor; font-size:12px;">
+            <strong>Çözüm:</strong> PostgreSQL kurulu değilse kurun. Kuruluysa, kurulum klasöründeki <code>bin</code> dizinini (örn. <code>C:\Program Files\PostgreSQL\16\bin</code>) Windows PATH'ine ekleyin ve sunucuyu yeniden başlatın.
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <div class="info-banner" style="background:var(--warn-bg); border-color:#E8DCB0; color:#8A6D1B;">
+      Her güvenli girişte (login) sistem zaten otomatik bir Snapshot alır. Geri yükleme komutu verildiğinde ise veri kaybını önlemek adına önce anlık durum "Pre-Restore" olarak yedeklenir. (Son 30 döngü saklanır).
+    </div>
+
+    <div style="overflow-x: auto; margin-top: 24px;">
+      <table class="crisp-table">
+        <thead>
+          <tr>
+            <th>Yedek Dosya Adı</th>
+            <th>Zaman Damgası</th>
+            <th>Hacim</th>
+            <th>Tetikleyici Tip</th>
+            <th style="text-align: right;">Sistem Aksiyonu</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="y in yedekler" :key="y.dosya">
+            <tr>
+              <td style="font-family: monospace; font-weight:600; color:var(--text-muted);" x-text="y.dosya"></td>
+              <td x-text="y.tarih"></td>
+              <td x-text="y.boyut_kb + ' KB'"></td>
+              <td>
+                <span class="badge-label"
+                      :class="y.tip === 'manual' ? 'badge-blue' : (y.dosya.includes('pre_restore') ? 'badge-red' : 'badge-green')"
+                      x-text="y.tip === 'manual' ? 'Kullanıcı Tetiklemeli' : (y.dosya.includes('pre_restore') ? 'Güvenlik Öncesi' : 'Sistem Otomatiği')"></span>
+              </td>
+              <td>
+                <div class="tbl-action-group">
+                  <a :href="'/api/yedek/indir/' + y.dosya" class="btn-icon-soft" title="Dosyayı Bilgisayara İndir"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>
+                  <button class="btn-icon-soft" @click="yedekGeriYukle(y.dosya)" title="Sistemi Bu Yedeğe Döndür"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
+                  <button class="btn-icon-soft danger" @click="yedekSil(y.dosya)" title="Kalıcı Sil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                </div>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="yedekler.length === 0">
+            <td colspan="5" style="text-align:center; padding:40px; color:var(--text-light);">Henüz yedek dosyası yok.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════ MODAL: LOOKUP EKLE ════════════════ -->
+  <div class="modal-bg" x-show="modalEkle" x-cloak @click.self="modalEkle=false">
+    <div class="modal-viewport-box" style="max-width: 450px;">
+      <div class="modal-top-bar">
+        <h3 style="font-size: 16px; font-weight: 700; color: var(--primary);">
+          Yeni <span x-text="secilenKatAdi"></span> Tanımı
+        </h3>
+        <button @click="modalEkle = false" style="background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-light);">&times;</button>
+      </div>
+      <form @submit.prevent="ekle()">
+        <div class="modal-form-body">
+          <div class="input-box">
+            <label>Değer / Tanım Adı *</label>
+            <input type="text" x-model="yeniForm.deger" required autofocus>
+          </div>
+        </div>
+        <div class="modal-bottom-bar">
+          <button type="button" class="btn-action btn-outline" @click="modalEkle=false">İptal</button>
+          <button type="submit" class="btn-action btn-primary">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ════════════════ MODAL: LOOKUP DÜZENLE ════════════════ -->
+  <div class="modal-bg" x-show="modalDuzenle" x-cloak @click.self="modalDuzenle=false">
+    <div class="modal-viewport-box" style="max-width: 450px;">
+      <div class="modal-top-bar">
+        <h3 style="font-size: 16px; font-weight: 700; color: var(--primary);">
+          <span x-text="secilenKatAdi"></span> Güncelle
+        </h3>
+        <button @click="modalDuzenle=false" style="background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-light);">&times;</button>
+      </div>
+      <form @submit.prevent="duzenleKaydet()">
+        <div class="modal-form-body">
+          <div class="input-box"><label>Değer *</label><input type="text" x-model="duzenleForm.deger" required></div>
+        </div>
+        <div class="modal-bottom-bar">
+          <button type="button" class="btn-action btn-outline" @click="modalDuzenle=false">İptal</button>
+          <button type="submit" class="btn-action btn-primary">Güncelle</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ════════════════ MODAL: BANKA ════════════════ -->
+  <div class="modal-bg" x-show="bankaModal" x-cloak @click.self="bankaModal=false">
+    <div class="modal-viewport-box" style="max-width: 700px;">
+      <div class="modal-top-bar">
+        <h3 style="font-size: 16px; font-weight: 700; color: var(--primary);"
+            x-text="bankaForm.id ? 'Banka Hesabı Güncelle' : 'Yeni Finans Hesabı Kaydı'"></h3>
+        <button @click="bankaModal = false" style="background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-light);">&times;</button>
+      </div>
+      <form @submit.prevent="bankaKaydet()">
+        <div class="modal-form-body">
+          <div class="form-col-2">
+            <div class="input-box"><label>Banka Adı / Unvanı *</label><input type="text" x-model="bankaForm.banka_adi" required></div>
+            <div class="input-box"><label>Şube Adı</label><input type="text" x-model="bankaForm.sube"></div>
+            <div class="input-box"><label>Hesap Numarası</label><input type="text" x-model="bankaForm.hesap_no"></div>
+            <div class="input-box">
+              <label>Kabul Edilen Döviz *</label>
+              <select x-model="bankaForm.doviz">
+                <option>USD</option><option>EUR</option><option>TRY</option><option>GBP</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-box">
+            <label>IBAN Numarası</label>
+            <input type="text" x-model="bankaForm.iban"
+                   style="font-family:monospace; letter-spacing:1px;" placeholder="TR00 0000...">
+          </div>
+          <div class="input-box">
+            <label>SWIFT / BIC Kodu</label>
+            <input type="text" x-model="bankaForm.swift" style="font-family:monospace; text-transform:uppercase;">
+          </div>
+          <div class="input-box">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; padding: 12px; background: var(--bg-body); border-radius: var(--radius-sm); border: 1px solid var(--border-mid);">
+              <input type="checkbox" x-model="bankaForm.varsayilan" style="width: 18px; height: 18px; margin:0;">
+              <span style="font-size:13px; font-weight:600; color:var(--primary);">
+                Sistem genelinde varsayılan tahsilat hesabı yap (Belgelere otomatik yansır)
+              </span>
+            </label>
+          </div>
+          <div class="input-box"><label>İç Açıklama</label><textarea x-model="bankaForm.aciklama" rows="2"></textarea></div>
+        </div>
+        <div class="modal-bottom-bar">
+          <button type="button" class="btn-action btn-outline" @click="bankaModal=false">Vazgeç</button>
+          <button type="submit" class="btn-action btn-primary">Kaydı Tamamla</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ════════════════ MODAL: KULLANICI ════════════════ -->
+  <div class="modal-bg" x-show="kullaniciModal" x-cloak @click.self="kullaniciModal=false">
+    <div class="modal-viewport-box" style="max-width: 700px;">
+      <div class="modal-top-bar">
+        <h3 style="font-size: 16px; font-weight: 700; color: var(--primary);"
+            x-text="kullaniciForm.id ? 'Kullanıcı Profilini Düzenle' : 'Sisteme Yeni Kullanıcı Ekle'"></h3>
+        <button @click="kullaniciModal=false" style="background:none; border:none; font-size:22px; cursor:pointer; color:var(--text-light);">&times;</button>
+      </div>
+      <form @submit.prevent="kullaniciKaydet()">
+        <div class="modal-form-body">
+          <div class="form-col-2">
+            <div class="input-box">
+              <label>Sistem Kullanıcı Adı *</label>
+              <input type="text" x-model="kullaniciForm.ad" required :disabled="!!kullaniciForm.id">
+            </div>
+            <div class="input-box">
+              <label>Parola <span x-show="!kullaniciForm.id">*</span></label>
+              <input type="password" x-model="kullaniciForm.sifre"
+                     :required="!kullaniciForm.id" placeholder="••••••••">
+            </div>
+            <div class="input-box">
+              <label>Rol</label>
+              <select x-model="kullaniciForm.rol">
+                <option value="ADMIN">ADMIN - Yönetici</option>
+                <option value="SATIS">SATIS - Ticari Personel</option>
+                <option value="MUHASEBE">MUHASEBE - Finans</option>
+                <option value="DEPO">DEPO - Operasyon</option>
+              </select>
+            </div>
+            <div class="input-box">
+              <label>Erişim</label>
+              <select x-model="kullaniciForm.aktif">
+                <option value="true">Giriş Yapabilir</option>
+                <option value="false">Sistem Kapalı</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="input-box" x-show="kullaniciForm.rol !== 'ADMIN'" style="margin-top: 10px;">
+            <label style="color:var(--primary); font-size:14px; border-bottom:1px solid var(--border-soft); padding-bottom:8px; margin-bottom:12px;">
+              Modül Bazlı Klasör İzinleri
+            </label>
+            <div style="background:var(--bg-body); border:1px solid var(--border-mid); border-radius:var(--radius-sm); padding:16px; max-height:280px; overflow-y:auto">
+              <!-- Yetki toplu -->
+              <div style="display:flex; gap:8px; margin-bottom:16px; padding-bottom:16px; border-bottom:1px dashed var(--border-mid); flex-wrap:wrap;">
+                <button type="button" @click="tumYetkiAyarla('gizli')" class="btn-action btn-outline" style="font-size:11px; padding:6px 10px;">Tümünü Gizle</button>
+                <button type="button" @click="tumYetkiAyarla('okuma')" class="btn-action btn-outline" style="font-size:11px; padding:6px 10px;">Tümünü Okuma Yap</button>
+                <button type="button" @click="tumYetkiAyarla('yazma')" class="btn-action btn-outline" style="font-size:11px; padding:6px 10px;">Tümüne Yazma Ver</button>
+              </div>
+              <!-- Modül satırları -->
+              <template x-for="m in modulListesi" :key="m.kod">
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.03)">
+                  <span style="font-size:13px; font-weight:600; color:var(--text-main);" x-text="m.ad"></span>
+                  <div style="display:flex; gap:4px">
+                    <label class="yetki-radio-label" :class="kullaniciForm.yetkiler[m.kod] === 'gizli' ? 'gizli-active' : ''">
+                      <input type="radio" :name="'yetki_'+m.kod" value="gizli" x-model="kullaniciForm.yetkiler[m.kod]" style="display:none">Gizli
+                    </label>
+                    <label class="yetki-radio-label" :class="kullaniciForm.yetkiler[m.kod] === 'okuma' ? 'okuma-active' : ''">
+                      <input type="radio" :name="'yetki_'+m.kod" value="okuma" x-model="kullaniciForm.yetkiler[m.kod]" style="display:none">Okuma
+                    </label>
+                    <label class="yetki-radio-label" :class="kullaniciForm.yetkiler[m.kod] === 'yazma' ? 'yazma-active' : ''">
+                      <input type="radio" :name="'yetki_'+m.kod" value="yazma" x-model="kullaniciForm.yetkiler[m.kod]" style="display:none">Yazma
+                    </label>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+          <div x-show="kullaniciForm.rol === 'ADMIN'" class="info-banner" style="margin-top:20px;">
+            Yönetici rolündeki hesaplar tüm modüllerde sınırsız tam yetkiye sahiptir.
+          </div>
+        </div>
+        <div class="modal-bottom-bar">
+          <button type="button" class="btn-action btn-outline" @click="kullaniciModal=false">İptal</button>
+          <button type="submit" class="btn-action btn-primary">Değişiklikleri İşle</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function ayarlarApp() {
+  return {
+    sekme: 'lookup',
+    yedekler: [],
+    bankalar: [],
+    bankaModal: false,
+    bankaForm: { id: null, banka_adi: '', sube: '', hesap_no: '', iban: '', swift: '', doviz: 'USD', aciklama: '', varsayilan: false },
+    vergiForm: { varsayilan_kdv: 20 },
+    yedekIslem: false,
+    yedekTaniSonuc: null,
+    isAdmin: false,
+    secilenKat: '',
+    secilenKatAdi: '',
+    katRows: [],
+    modalEkle: false,
+    modalDuzenle: false,
+    kullaniciModal: false,
+    yeniForm: { deger: '', kisaltma: '' },
+    duzenleForm: { id: '', deger: '', kisaltma: '' },
+    kullaniciForm: { id: '', ad: '', sifre: '', rol: 'SATIS', aktif: 'true', yetkiler: {} },
+    kullanicilar: [],
+    modulListesi: [
+      { kod: 'dashboard',    ad: 'Dashboard' },
+      { kod: 'stok',         ad: 'Stok Modülü' },
+      { kod: 'siparis',      ad: 'Sipariş' },
+      { kod: 'rezervasyon',  ad: 'Rezervasyon' },
+      { kod: 'proforma',     ad: 'Proforma' },
+      { kod: 'fatura',       ad: 'Fatura' },
+      { kod: 'cari',         ad: 'Cari Bağlantı' },
+      { kod: 'maliyet',      ad: 'Maliyet Atama' },
+      { kod: 'kasa',         ad: 'Kasa' },
+      { kod: 'sevkiyat',     ad: 'Sevkiyat' },
+      { kod: 'kesim',        ad: 'Kesimhane' },
+      { kod: 'karlilik',     ad: 'Karlılık İzleme' },
+      { kod: 'satislar',     ad: 'Satış Analizi' },
+      { kod: 'raporlar',     ad: 'Genel Raporlar' },
+      { kod: 'ayarlar',      ad: 'Sistem Ayarları' },
+      { kod: 'denetim',      ad: 'Denetim Logları' }
+    ],
+    kategoriler: [
+      { id: 'cins',           label: 'Taş Cinsleri', count: 0 },
+      { id: 'ozellik',        label: 'Yüzey Özellikleri', count: 0 },
+      { id: 'durum',          label: 'Stok Durum Tipi', count: 0 },
+      { id: 'siparis_durum',  label: 'Sipariş Durum Tipi', count: 0 },
+      { id: 'odeme',          label: 'Ödeme Şekilleri', count: 0 },
+      { id: 'teslim',         label: 'Teslim Şekilleri', count: 0 }
+    ],
+
+    async init() {
+      try {
+        const kData = await fetch('/api/ayarlar/kullanici').then(r => r.json());
+        this.isAdmin = Array.isArray(kData);
+        if (this.isAdmin) this.kullanicilar = kData;
+      } catch(e) { this.isAdmin = false; }
+
+      try {
+        const all = await fetch('/api/ayarlar/lookup').then(r => r.json());
+        const counts = {};
+        if (Array.isArray(all)) all.forEach(r => { counts[r.kategori] = (counts[r.kategori] || 0) + 1; });
+        this.kategoriler = this.kategoriler.map(k => ({ ...k, count: counts[k.id] || 0 }));
+      } catch(e) { console.warn(e); }
+
+      if (this.kategoriler.length > 0) {
+        this.secilenKat = this.kategoriler[0].id;
+        this.secilenKatAdi = this.kategoriler[0].label;
+        await this.loadKat();
+      }
+    },
+
+    async loadKat() {
+      try {
+        this.katRows = await fetch('/api/ayarlar/lookup?kategori=' + this.secilenKat).then(r => r.json()) || [];
+      } catch(e) {
+        Utils.error('Kategori yüklenemedi: ' + e.message);
+        this.katRows = [];
+      }
+    },
+
+    async ekle() {
+      if (!this.yeniForm.deger.trim()) { Utils.error('Değer alanı boş olamaz'); return; }
+      try {
+        const res = await fetch('/api/ayarlar/lookup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            kategori: this.secilenKat,
+            deger: this.yeniForm.deger,
+            kisaltma: this.yeniForm.kisaltma
+          })
+        });
+        const d = await res.json();
+        if (d.ok) {
+          this.modalEkle = false;
+          this.yeniForm = { deger: '', kisaltma: '' };
+          await this.loadKat();
+          const idx = this.kategoriler.findIndex(k => k.id === this.secilenKat);
+          if (idx !== -1) this.kategoriler[idx].count++;
+          Utils.success('Kayıt eklendi');
+        } else {
+          Utils.error(d.mesaj || 'Eklenemedi');
+        }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    duzenleAc(r) {
+      this.duzenleForm = { id: r.id, deger: r.deger, kisaltma: r.kisaltma || '' };
+      this.modalDuzenle = true;
+    },
+
+    async duzenleKaydet() {
+      try {
+        const res = await fetch('/api/ayarlar/lookup/' + this.duzenleForm.id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.duzenleForm)
+        });
+        const d = await res.json();
+        if (d.ok) {
+          this.modalDuzenle = false;
+          await this.loadKat();
+          Utils.success('Güncellendi');
+        } else {
+          Utils.error(d.mesaj || 'Güncellenemedi');
+        }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async sil(r) {
+      if (!(await Utils.confirm('"' + r.deger + '" tanımı silinecek. Devam edilsin mi?'))) return;
+      try {
+        const res = await fetch('/api/ayarlar/lookup/' + r.id, { method: 'DELETE' });
+        const d = await res.json();
+        if (d.ok) {
+          await this.loadKat();
+          const idx = this.kategoriler.findIndex(k => k.id === this.secilenKat);
+          if (idx !== -1) this.kategoriler[idx].count--;
+          Utils.success('Silindi');
+        } else {
+          Utils.error(d.mesaj || 'Silinemedi');
+        }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    // ─── Banka ───
+    async bankaListele() {
+      try {
+        const r = await fetch('/api/banka').then(r => r.json());
+        this.bankalar = Array.isArray(r) ? r : [];
+      } catch(e) { this.bankalar = []; }
+    },
+
+    bankaYeniAc() {
+      this.bankaForm = {
+        id: null, banka_adi: '', sube: '', hesap_no: '',
+        iban: '', swift: '', doviz: 'USD', aciklama: '',
+        varsayilan: this.bankalar.length === 0
+      };
+      this.bankaModal = true;
+    },
+
+    bankaDuzenleAc(b) { this.bankaForm = { ...b }; this.bankaModal = true; },
+
+    async bankaKaydet() {
+      if (!this.bankaForm.banka_adi.trim()) { Utils.error('Banka adı zorunlu'); return; }
+      const url = this.bankaForm.id ? '/api/banka/' + this.bankaForm.id : '/api/banka';
+      try {
+        const r = await fetch(url, {
+          method: this.bankaForm.id ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.bankaForm)
+        }).then(r => r.json());
+        if (r.ok) {
+          this.bankaModal = false;
+          await this.bankaListele();
+          Utils.success(this.bankaForm.id ? 'Banka güncellendi' : 'Banka eklendi');
+        } else {
+          Utils.error(r.mesaj || 'Kayıt başarısız');
+        }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async bankaSil(b) {
+      if (!(await Utils.confirm('"' + b.banka_adi + '" silinecek. Devam?'))) return;
+      try {
+        const r = await fetch('/api/banka/' + b.id, { method: 'DELETE' }).then(r => r.json());
+        if (r.ok) {
+          await this.bankaListele();
+          Utils.success('Banka silindi');
+        } else {
+          Utils.error(r.mesaj || 'Silinemedi');
+        }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    // ─── Vergi ───
+    async vergiAyariYukle() {
+      try {
+        const r = await fetch('/api/ayarlar/lookup?kategori=kdv_ayar').then(r => r.json());
+        if (Array.isArray(r)) {
+          const k = r.find(x => x.deger === 'varsayilan_oran');
+          if (k) this.vergiForm.varsayilan_kdv = parseFloat(k.kisaltma) || 20;
+        } else if (r.data) {
+          const k = r.data.find(x => x.deger === 'varsayilan_oran');
+          if (k) this.vergiForm.varsayilan_kdv = parseFloat(k.kisaltma) || 20;
+        }
+      } catch(e) { console.warn(e); }
+    },
+
+    async vergiAyariKaydet() {
+      const o = parseFloat(this.vergiForm.varsayilan_kdv);
+      if (isNaN(o) || o < 0 || o > 100) { Utils.error('Geçerli bir KDV oranı girin (0-100)'); return; }
+      try {
+        const r = await fetch('/api/ayarlar/kdv_oran', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ oran: o })
+        }).then(r => r.json());
+        if (r.ok) Utils.success('KDV oranı güncellendi');
+        else Utils.error(r.mesaj || 'Güncellenemedi');
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    // ─── Yedek ───
+    async yedekListele() {
+      try {
+        const r = await fetch('/api/yedek/liste').then(r => r.json());
+        if (r.ok) this.yedekler = r.yedekler || [];
+        else this.yedekler = [];
+      } catch(e) { this.yedekler = []; }
+    },
+
+    async yedekTani() {
+      try {
+        const r = await fetch('/api/yedek/tani').then(r => r.json());
+        if (r.ok) this.yedekTaniSonuc = r.tani;
+        else Utils.error(r.mesaj || 'Tanı alınamadı');
+      } catch(e) { Utils.error('Tanı hatası: ' + e.message); }
+    },
+
+    async yedekAl() {
+      if (!(await Utils.confirm('Manuel yedek alınacak. Devam edilsin mi?'))) return;
+      this.yedekIslem = true;
+      try {
+        const r = await fetch('/api/yedek/al', { method: 'POST' }).then(r => r.json());
+        if (r.ok) {
+          await this.yedekListele();
+          Utils.success(r.mesaj || 'Yedek alındı');
+          this.yedekTaniSonuc = null;
+        } else {
+          Utils.error(r.mesaj || 'Yedek alınamadı');
+          // Başarısızsa tanı bilgisini otomatik göster
+          if (r.tani) this.yedekTaniSonuc = r.tani;
+          else await this.yedekTani();
+        }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+      this.yedekIslem = false;
+    },
+
+    async yedekGeriYukle(dosya) {
+      // İki aşamalı güvenli onay (prompt yerine Utils.confirm zinciri)
+      const ilkOnay = await Utils.confirm(
+        '⚠️ KRİTİK İŞLEM ⚠️\n\n' +
+        '"' + dosya + '" yedeği geri yüklenecek.\n' +
+        'Mevcut tüm veriler bu yedek ile değiştirilecek.\n' +
+        '(Önce otomatik "pre_restore" yedeği alınır.)\n\n' +
+        'Devam edilsin mi?'
+      );
+      if (!ilkOnay) return;
+
+      const sonOnay = await Utils.confirm(
+        'SON UYARI: Bu işlem geri alınamaz.\n\n' +
+        'Geri yükleme başlatılıyor. Onaylıyor musunuz?'
+      );
+      if (!sonOnay) return;
+
+      try {
+        const r = await fetch('/api/yedek/geri_yukle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dosya })
+        }).then(r => r.json());
+        if (r.ok) {
+          Utils.success(r.mesaj || 'Geri yükleme tamamlandı. Sayfayı yenileyin.');
+          await this.yedekListele();
+        } else {
+          Utils.error(r.mesaj || 'Geri yükleme başarısız');
+        }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async yedekSil(dosya) {
+      if (!(await Utils.confirm('"' + dosya + '" yedek dosyası kalıcı olarak silinecek. Devam?'))) return;
+      try {
+        const r = await fetch('/api/yedek/sil', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dosya })
+        }).then(r => r.json());
+        if (r.ok) {
+          await this.yedekListele();
+          Utils.success('Yedek silindi');
+        } else {
+          Utils.error(r.mesaj || 'Silinemedi');
+        }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    // ─── Kullanıcı ───
+    _bosYetki(v) {
+      const y = {};
+      this.modulListesi.forEach(m => { y[m.kod] = v || 'gizli'; });
+      return y;
+    },
+
+    tumYetkiAyarla(s) {
+      const y = {};
+      this.modulListesi.forEach(m => { y[m.kod] = s; });
+      this.kullaniciForm.yetkiler = y;
+    },
+
+    kullaniciEkleModalAc() {
+      this.kullaniciForm = {
+        id: '', ad: '', sifre: '', rol: 'SATIS', aktif: 'true',
+        yetkiler: this._bosYetki('gizli')
+      };
+      this.kullaniciModal = true;
+    },
+
+    kullaniciDuzenleAc(k) {
+      this.kullaniciForm = {
+        id: k.id, ad: k.ad, sifre: '',
+        rol: k.rol, aktif: k.aktif ? 'true' : 'false',
+        yetkiler: Object.assign(this._bosYetki('gizli'), k.yetkiler || {})
+      };
+      this.kullaniciModal = true;
+    },
+
+    async kullaniciKaydet() {
+      if (!this.kullaniciForm.ad.trim()) { Utils.error('Kullanıcı adı zorunlu'); return; }
+      if (!this.kullaniciForm.id && !this.kullaniciForm.sifre) { Utils.error('Yeni kullanıcı için parola zorunlu'); return; }
+      try {
+        const url = this.kullaniciForm.id ? '/api/ayarlar/kullanici/' + this.kullaniciForm.id : '/api/ayarlar/kullanici';
+        const r = await fetch(url, {
+          method: this.kullaniciForm.id ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.kullaniciForm)
+        }).then(r => r.json());
+        if (r.ok) {
+          this.kullaniciModal = false;
+          const kData = await fetch('/api/ayarlar/kullanici').then(r => r.json());
+          if (Array.isArray(kData)) this.kullanicilar = kData;
+          Utils.success(this.kullaniciForm.id ? 'Kullanıcı güncellendi' : 'Kullanıcı eklendi');
+        } else {
+          Utils.error(r.mesaj || 'Kayıt başarısız');
+        }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async kullaniciSil(id, ad) {
+      if (ad === 'admin') { Utils.warning('Sistem admin hesabı silinemez'); return; }
+      if (!(await Utils.confirm('"' + ad + '" kullanıcısı silinecek. Devam?'))) return;
+      try {
+        const r = await fetch('/api/ayarlar/kullanici/' + id, { method: 'DELETE' }).then(r => r.json());
+        if (r.ok) {
+          const kData = await fetch('/api/ayarlar/kullanici').then(r => r.json());
+          if (Array.isArray(kData)) this.kullanicilar = kData;
+          Utils.success('Kullanıcı silindi');
+        } else {
+          Utils.error(r.mesaj || 'Silinemedi');
+        }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    }
+  };
+}
+</script>
+{% endblock %}

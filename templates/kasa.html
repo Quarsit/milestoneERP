@@ -1,0 +1,801 @@
+{% extends "base.html" %}
+{% block title %}Kasa Yönetimi{% endblock %}
+{% block header_title %}Kasa ve Finansal Hesaplar{% endblock %}
+{% block content %}
+<style>
+  /* ─── Üst aksiyon barı ─── */
+  .kasa-top-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--bg-surface); padding: 16px 24px;
+    border-radius: var(--radius-md); border: 1px solid var(--border-soft);
+    margin-bottom: 24px; box-shadow: var(--shadow-blur);
+    flex-wrap: wrap; gap: 16px;
+  }
+
+  /* ─── Kasa Kartları ─── */
+  .ana-kasa-serit {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .ana-kasa-kutu {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    background: var(--primary);
+    border-radius: 12px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.15s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+  .ana-kasa-kutu:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,0.15); }
+  .ana-kasa-kutu.aktif { border-color: var(--accent); }
+  .ana-kasa-dvz {
+    font-size: 13px; font-weight: 800; color: #fff;
+    background: var(--accent); padding: 8px 12px; border-radius: 8px;
+    min-width: 52px; text-align: center; letter-spacing: 0.5px;
+  }
+  .ana-kasa-bilgi { display: flex; flex-direction: column; gap: 2px; }
+  .ana-kasa-etiket {
+    font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.6);
+    text-transform: uppercase; letter-spacing: 0.8px;
+  }
+  .ana-kasa-tutar {
+    font-size: 22px; font-weight: 800; color: #fff;
+    font-family: 'SF Mono', Menlo, monospace; line-height: 1.1;
+  }
+  @media (max-width: 720px) {
+    .ana-kasa-serit { grid-template-columns: 1fr; }
+  }
+  .kasa-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 18px; margin-bottom: 28px;
+  }
+  .kasa-kart {
+    background: var(--bg-surface); border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md); padding: 20px;
+    box-shadow: var(--shadow-blur); cursor: pointer;
+    transition: all 0.25s ease;
+    display: flex; flex-direction: column;
+    position: relative; overflow: hidden;
+  }
+  .kasa-kart::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+    width: 4px; background: var(--border-mid);
+    transition: background 0.25s ease;
+  }
+  .kasa-kart:hover {
+    box-shadow: var(--shadow-hover); transform: translateY(-2px);
+    border-color: var(--border-mid);
+  }
+  .kasa-kart.aktif {
+    border: 2px solid var(--primary);
+    box-shadow: 0 8px 24px rgba(35,40,36,0.08);
+  }
+  .kasa-kart.aktif::before { background: var(--primary); }
+
+  .kasa-kart-head {
+    display: flex; justify-content: space-between;
+    align-items: flex-start; margin-bottom: 12px;
+  }
+  .doviz-badge {
+    display: inline-block; padding: 4px 12px;
+    border-radius: 20px; font-size: 11px; font-weight: 700;
+    background: var(--accent-light); color: var(--accent);
+    border: 1px solid #E8C9B8;
+  }
+  .kasa-ad {
+    font-size: 15px; font-weight: 700; color: var(--primary);
+    margin-bottom: 8px;
+  }
+  .kasa-bakiye {
+    font-size: 26px; font-weight: 800; font-family: monospace;
+    line-height: 1.1; margin-bottom: 10px;
+  }
+  .kasa-mini-istatistik {
+    display: flex; gap: 12px; margin-top: 10px;
+    padding-top: 12px; border-top: 1px dashed var(--border-soft);
+    font-size: 11px;
+  }
+  .kasa-mini-istatistik span { display: flex; flex-direction: column; gap: 2px; }
+  .kasa-mini-istatistik .lbl { color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 9px; }
+  .kasa-mini-istatistik .val { font-weight: 700; font-family: monospace; }
+  .kasa-aksiyon {
+    position: absolute; top: 16px; right: 16px;
+    display: flex; gap: 4px; opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .kasa-kart:hover .kasa-aksiyon { opacity: 1; }
+
+  /* ─── Hareket tablosu ─── */
+  .hareket-bolum {
+    background: var(--bg-surface); border-radius: var(--radius-md);
+    border: 1px solid var(--border-soft); box-shadow: var(--shadow-blur);
+    margin-bottom: 24px;
+  }
+  .hareket-bolum-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 18px 24px; border-bottom: 1px solid var(--border-soft);
+    flex-wrap: wrap; gap: 12px; background: var(--bg-body);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+  }
+
+  .hareket-tablo {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+  }
+  .hareket-tablo th {
+    background: var(--bg-body); color: var(--text-muted);
+    padding: 14px 20px; font-weight: 600;
+    border-bottom: 1px solid var(--border-soft);
+    text-transform: uppercase; font-size: 11px;
+    letter-spacing: 0.5px; text-align: left;
+  }
+  .hareket-tablo td {
+    padding: 14px 20px; border-bottom: 1px solid var(--border-soft);
+    color: var(--text-main); vertical-align: middle;
+  }
+  .hareket-tablo tr:hover { background: var(--row-hover); }
+  .hareket-tablo tr:last-child td { border-bottom: none; }
+
+  .tip-pill {
+    padding: 3px 10px; border-radius: 30px;
+    font-size: 11px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 4px;
+    border: 1px solid;
+  }
+  .tip-giris { background: var(--success-bg); color: var(--success); border-color: #CBD6CC; }
+  .tip-cikis { background: var(--danger-bg); color: var(--danger); border-color: #E2C9C5; }
+
+  /* ─── Modal yapısı ─── */
+  .btn-action {
+    padding: 10px 18px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    border: 1px solid var(--border-mid); background: var(--bg-surface);
+    color: var(--text-main); transition: all 0.2s ease;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn-action:hover { background: var(--border-soft); }
+  .btn-action.btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .btn-action.btn-primary:hover { background: var(--primary-light); }
+  .btn-action.btn-outline { background: #fff; }
+  .btn-action.btn-outline:hover { background: var(--border-soft); }
+  .btn-action.btn-success { background: var(--success); color: #fff; border-color: var(--success); }
+  .btn-action.btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+  .btn-icon-soft {
+    width: 32px; height: 32px; border-radius: 8px;
+    border: 1px solid var(--border-mid); background: var(--bg-surface);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s ease;
+  }
+  .btn-icon-soft svg { width:15px; height:15px; stroke-width:1.8; }
+  .btn-icon-soft:hover { background: var(--border-soft); }
+  .btn-icon-soft.danger { color: var(--danger); }
+  .btn-icon-soft.danger:hover { background: var(--danger-bg); border-color: #E2C9C5; }
+
+  /* Form sayfa içi */
+  .input-box { margin-bottom: 14px; }
+  .input-box label {
+    display: block; font-size: 11px; font-weight: 700;
+    color: var(--text-light); text-transform: uppercase;
+    margin-bottom: 6px; letter-spacing: 0.3px;
+  }
+  .input-box input, .input-box select, .input-box textarea {
+    width: 100%; padding: 10px 14px;
+    border: 1px solid var(--border-mid); border-radius: var(--radius-sm);
+    font-size: 13px; outline: none; font-family: inherit;
+    background: var(--bg-surface);
+  }
+  .input-box input:focus, .input-box select:focus, .input-box textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(35,40,36,0.04);
+  }
+  .form-col-2 {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin-bottom: 14px;
+  }
+  @media (max-width: 600px) { .form-col-2 { grid-template-columns: 1fr; } }
+
+  /* Tip seçim toggle */
+  .tip-toggle {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 0; background: var(--border-soft);
+    border-radius: var(--radius-sm); padding: 4px;
+    margin-bottom: 16px;
+  }
+  .tip-toggle button {
+    padding: 10px 14px; border: none; background: transparent;
+    border-radius: 6px; cursor: pointer; font-weight: 700;
+    font-size: 13px; transition: all 0.2s ease;
+    color: var(--text-muted);
+  }
+  .tip-toggle button.aktif-giris {
+    background: var(--success); color: #fff;
+    box-shadow: 0 2px 6px rgba(74,93,78,0.25);
+  }
+  .tip-toggle button.aktif-cikis {
+    background: var(--danger); color: #fff;
+    box-shadow: 0 2px 6px rgba(169,68,56,0.25);
+  }
+
+  /* Toplam bilgi kutusu */
+  .toplam-kutu {
+    background: var(--primary); color: #fff;
+    padding: 16px 20px; border-radius: var(--radius-md);
+    margin-bottom: 24px; display: flex;
+    justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 14px;
+  }
+  .toplam-kutu .lbl {
+    font-size: 11px; opacity: 0.8;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  .toplam-kutu .val {
+    font-size: 24px; font-weight: 800; font-family: monospace;
+  }
+</style>
+
+<div x-data="kasaApp()" x-init="init()">
+
+  <!-- Üst aksiyon barı -->
+  <div class="kasa-top-bar">
+    <h3 style="font-size:18px; color:var(--primary); margin:0;">Finansal Kasa Durumları</h3>
+    <button class="btn-action btn-primary" @click="kasaEkleAc()">+ Yeni Kasa Tanımla</button>
+  </div>
+
+  <!-- Boş durumu -->
+  <div x-show="kasalar.length === 0" style="text-align:center; padding:60px 20px; background:var(--bg-surface); border:1px dashed var(--border-mid); border-radius:var(--radius-md); color:var(--text-light); margin-bottom:24px;">
+    Henüz kasa tanımlı değil. <strong>+ Yeni Kasa Tanımla</strong> ile başla.
+  </div>
+
+  <!-- ANA KASA ÖZET ŞERİDİ (USD/EUR/TRY BAKİYE) - üstte, ince, yatay -->
+  <div class="ana-kasa-serit" x-show="kasalar.some(k => k.ana_kasa)">
+    <template x-for="k in kasalar.filter(k => k.ana_kasa)" :key="k.id">
+      <div class="ana-kasa-kutu" @click="kasaSec(k.id)" :class="seciliKasa === k.id ? 'aktif' : ''">
+        <div class="ana-kasa-dvz" x-text="k.doviz"></div>
+        <div class="ana-kasa-bilgi">
+          <div class="ana-kasa-etiket" x-text="k.ad"></div>
+          <div class="ana-kasa-tutar" :style="(parseFloat(k.bakiye)||0) >= 0 ? '' : 'color:#fca5a5;'">
+            <span x-text="fmtSayi(k.bakiye)"></span>
+            <span style="font-size:12px; opacity:0.7;" x-text="k.doviz"></span>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Kasa kartları (sadece alt/banka kasaları) -->
+  <div class="kasa-grid" x-show="kasalar.some(k => !k.ana_kasa)">
+    <template x-for="k in kasalar.filter(k => !k.ana_kasa)" :key="k.id">
+      <div class="kasa-kart" :class="seciliKasa === k.id ? 'aktif' : ''" @click="kasaSec(k.id)">
+        <div class="kasa-aksiyon">
+          <button class="btn-icon-soft" @click.stop="kasaDuzenleAc(k)" title="Düzenle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
+          <button class="btn-icon-soft danger" @click.stop="kasaSil(k)" title="Sil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+        </div>
+
+        <div class="kasa-kart-head">
+          <span class="doviz-badge" x-text="k.doviz"></span>
+        </div>
+
+        <div class="kasa-ad" x-text="k.ad"></div>
+
+        <div class="kasa-bakiye" :style="(parseFloat(k.bakiye)||0) >= 0 ? 'color:var(--success)' : 'color:var(--danger)'">
+          <span x-text="fmtSayi(k.bakiye)"></span>
+          <span style="font-size:14px; color:var(--text-muted); font-weight:600;" x-text="k.doviz"></span>
+        </div>
+
+        <div class="kasa-mini-istatistik" x-show="k.giris_toplam !== undefined || k.cikis_toplam !== undefined">
+          <span>
+            <span class="lbl">Giriş</span>
+            <span class="val" style="color:var(--success);" x-text="fmtSayi(k.giris_toplam || 0)"></span>
+          </span>
+          <span>
+            <span class="lbl">Çıkış</span>
+            <span class="val" style="color:var(--danger);" x-text="fmtSayi(k.cikis_toplam || 0)"></span>
+          </span>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- SEÇİLİ KASA HAREKETLERİ -->
+  <div class="hareket-bolum" x-show="seciliKasa" x-cloak>
+    <div class="hareket-bolum-head">
+      <div>
+        <h4 style="margin:0; color:var(--primary); font-size:16px; font-weight:700;" x-text="(seciliKasaObj?.ad || '') + ' — Hareket Detayları'"></h4>
+        <div style="font-size:12px; color:var(--text-muted); margin-top:4px;">
+          Toplam <strong x-text="hareketler.length"></strong> hareket
+        </div>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn-action btn-success" x-show="!seciliKasaObj?.ana_kasa" @click="hareketAc('giris')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg> Giriş Ekle</button>
+        <button class="btn-action btn-danger" x-show="!seciliKasaObj?.ana_kasa" @click="hareketAc('cikis')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg> Çıkış Ekle</button>
+        <span x-show="seciliKasaObj?.ana_kasa" style="font-size:12px; color:#8A6D1B; background:var(--warn-bg); padding:6px 12px; border-radius:8px;">
+          Ana kasa — bakiye alt kasalardan otomatik gelir, doğrudan hareket girilemez.
+        </span>
+        <button class="btn-action" style="background:var(--success); color:#fff;" @click="excelIndir()" title="Excel olarak indir">Excel</button>
+        <button class="btn-action" style="background:var(--accent); color:#fff;" @click="pdfYazdir()" title="PDF olarak yazdır">PDF</button>
+      </div>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table class="hareket-tablo">
+        <thead>
+          <tr>
+            <th>Tarih</th>
+            <th x-show="seciliKasaObj?.ana_kasa">Kasa</th>
+            <th>Tip</th>
+            <th style="text-align:right;">Tutar</th>
+            <th>Evrak No</th>
+            <th>Açıklama</th>
+            <th style="text-align:right;">İşlem</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="h in hareketler" :key="h.id">
+            <tr>
+              <td style="font-size:12px; color:var(--text-muted); font-weight:600;" x-text="fmtTarih(h.tarih)"></td>
+              <td x-show="seciliKasaObj?.ana_kasa" style="font-size:11px; color:var(--text-muted); font-weight:600;" x-text="h.kasa_adi || '-'"></td>
+              <td>
+                <span class="tip-pill" :class="'tip-' + h.tip">
+                  <span x-text="h.tip === 'giris' ? 'Giriş' : 'Çıkış'"></span>
+                </span>
+              </td>
+              <td style="text-align:right; font-weight:700; font-family:monospace;"
+                  :style="h.tip === 'giris' ? 'color:var(--success);' : 'color:var(--danger);'">
+                <span x-text="(h.tip === 'giris' ? '+' : '-') + fmtSayi(h.tutar)"></span>
+              </td>
+              <td style="font-family:monospace; font-size:12px; color:var(--text-muted);" x-text="h.evrak_no || '-'"></td>
+              <td x-text="h.aciklama || '-'"></td>
+              <td style="text-align:right;">
+                <button x-show="!seciliKasaObj?.ana_kasa" class="btn-icon-soft danger" @click="hareketSil(h.id)" title="Sil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                <span x-show="seciliKasaObj?.ana_kasa" style="font-size:10px; color:var(--text-light);" title="Konsolide görünümde silme alt kasadan yapılır">—</span>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="hareketler.length === 0">
+            <td :colspan="seciliKasaObj?.ana_kasa ? 7 : 6" style="text-align:center; padding:40px; color:var(--text-light);">
+              Bu kasada henüz hareket yok
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       YENİ / DÜZENLE KASA MODAL
+       ════════════════════════════════════════════════════ -->
+  <div class="modal-bg" x-show="kasaModal" x-cloak @click.self="kasaModal=false">
+    <div class="modal" style="width:min(540px, 95vw);">
+      <div class="modal-title">
+        <span x-text="kasaForm.id ? 'Kasayı Düzenle' : '+ Yeni Kasa Tanımla'"></span>
+        <span class="modal-close" @click="kasaModal=false">×</span>
+      </div>
+
+      <form @submit.prevent="kasaKaydet()">
+        <div class="input-box" style="background:var(--bg-body); padding:12px 14px; border-radius:var(--radius-sm); border:1px dashed var(--border-mid);">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin:0; text-transform:none; letter-spacing:0; font-size:13px; font-weight:700; color:var(--primary);">
+            <input type="checkbox" x-model="kasaForm.ana_kasa" style="width:16px; height:16px; margin:0;">
+            Ana Kasa (döviz bazlı konsolide özet)
+          </label>
+          <small style="display:block; font-size:10px; color:var(--text-muted); margin-top:6px;">
+            Ana kasa, aynı dövizdeki tüm alt kasaların bakiyesini otomatik toplar; üst özet şeridinde
+            (USD/EUR/TRY) gösterilir ve kendisine doğrudan hareket girilemez. Her döviz için en fazla
+            bir ana kasa tanımlamanız önerilir.
+          </small>
+        </div>
+
+        <div class="input-box" x-show="!kasaForm.ana_kasa">
+          <label>Bağlı Banka (Banka & Finans tanımları)</label>
+          <select x-model="kasaForm.banka_id" @change="bankaSecildi()">
+            <option value="">— Banka seçin (opsiyonel) —</option>
+            <template x-for="b in bankaListesi" :key="b.id">
+              <option :value="b.id" x-text="b.banka_adi + ' · ' + b.doviz + (b.sube ? ' · ' + b.sube : '')"></option>
+            </template>
+          </select>
+          <small style="font-size:10px; color:var(--text-muted, #888);">
+            Banka seçilince kasa adı ve döviz otomatik dolar. Bankalar Ayarlar → Banka & Finans'tan tanımlanır.
+          </small>
+        </div>
+
+        <div class="input-box">
+          <label>Kasa Adı *</label>
+          <input type="text" x-model="kasaForm.ad" required :placeholder="kasaForm.ana_kasa ? 'Örn: USD Ana Kasa' : 'Örn: Garanti USD Kasası'">
+        </div>
+
+        <div class="form-col-2">
+          <div class="input-box">
+            <label>Döviz *</label>
+            <select x-model="kasaForm.doviz" required>
+              <option value="TRY">TRY — Türk Lirası</option>
+              <option value="USD">USD — Amerikan Doları</option>
+              <option value="EUR">EUR — Euro</option>
+              <option value="GBP">GBP — İngiliz Sterlini</option>
+            </select>
+          </div>
+          <div class="input-box" x-show="!kasaForm.ana_kasa">
+            <label>Başlangıç Bakiyesi</label>
+            <input type="number" step="0.01" x-model="kasaForm.baslangic_bakiye" placeholder="0.00">
+          </div>
+        </div>
+
+        <div class="input-box">
+          <label>Açıklama</label>
+          <textarea x-model="kasaForm.aciklama" rows="2" placeholder="Opsiyonel banka/hesap bilgileri" style="resize:vertical;"></textarea>
+        </div>
+
+        <div style="background:var(--info-bg); border:1px solid #C4D2E6; color:var(--info); padding:10px 14px; border-radius:var(--radius-sm); font-size:12px; margin-bottom:16px;" x-show="!kasaForm.ana_kasa">
+          Başlangıç bakiyesi kasa açılışında "Giriş" hareketi olarak kaydedilir.
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; padding-top:16px; border-top:1px solid var(--border-soft);">
+          <button type="button" class="btn-action btn-outline" @click="kasaModal=false">İptal</button>
+          <button type="submit" class="btn-action btn-primary" x-text="kasaForm.id ? 'Güncelle' : 'Oluştur'"></button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       HAREKET MODAL (Giriş / Çıkış)
+       ════════════════════════════════════════════════════ -->
+  <div class="modal-bg" x-show="hareketModal" x-cloak @click.self="hareketModal=false">
+    <div class="modal" style="width:min(540px, 95vw);">
+      <div class="modal-title">
+        <span x-text="hareketForm.tip === 'giris' ? 'Kasaya Para Girişi' : 'Kasadan Para Çıkışı'"></span>
+        <span class="modal-close" @click="hareketModal=false">×</span>
+      </div>
+
+      <form @submit.prevent="hareketKaydet()">
+
+        <!-- Tip toggle -->
+        <div class="tip-toggle">
+          <button type="button" @click="hareketForm.tip='giris'"
+                  :class="hareketForm.tip==='giris' ? 'aktif-giris' : ''">
+            GİRİŞ
+          </button>
+          <button type="button" @click="hareketForm.tip='cikis'"
+                  :class="hareketForm.tip==='cikis' ? 'aktif-cikis' : ''">
+            ÇIKIŞ
+          </button>
+        </div>
+
+        <div class="form-col-2">
+          <div class="input-box">
+            <label>Tarih *</label>
+            <input type="date" x-model="hareketForm.tarih" required>
+          </div>
+          <div class="input-box">
+            <label>Tutar (<span x-text="seciliKasaObj?.doviz || ''"></span>) *</label>
+            <input type="number" step="any" inputmode="decimal" x-model.number="hareketForm.tutar" required
+                   placeholder="0.00"
+                   style="font-family:monospace; font-weight:700; font-size:16px;"
+                   :style="hareketForm.tip === 'giris' ? 'color:var(--success);' : 'color:var(--danger);'">
+          </div>
+        </div>
+
+        <div class="input-box">
+          <label>Evrak / Dekont No</label>
+          <input type="text" x-model="hareketForm.evrak_no" placeholder="Opsiyonel">
+        </div>
+
+        <!-- Cari + Fatura ilişkilendirme (opsiyonel) -->
+        <div class="input-box" style="background:var(--bg-body); padding:12px; border-radius:8px; border:1px dashed var(--border-mid);">
+          <label style="font-weight:700; color:var(--text-muted);">
+            Cari / Fatura İlişkilendir <span style="font-weight:400; font-size:11px;">(opsiyonel)</span>
+          </label>
+          <small style="display:block; font-size:10px; color:var(--text-light); margin-bottom:8px;">
+            Bir cari seçerseniz bu hareket <strong x-text="hareketForm.tip==='giris' ? 'tahsilat' : 'tediye'"></strong> olarak cari hesaba işlenir.
+          </small>
+          <select x-model="hareketForm.cari_id" @change="acikFaturalariYukle()" style="width:100%; padding:8px; margin-bottom:8px;">
+            <option value="">— Cari seçmeyin (bağımsız hareket) —</option>
+            <template x-for="c in hareketCariListesi" :key="c.id">
+              <option :value="c.id" x-text="c.unvan"></option>
+            </template>
+          </select>
+          <select x-model="hareketForm.fatura_id" x-show="hareketForm.cari_id" @change="faturaSecildi()" style="width:100%; padding:8px;">
+            <option value="">— Fatura seçmeyin (genel cari hareketi) —</option>
+            <template x-for="f in hareketAcikFaturalar" :key="f.id">
+              <option :value="f.id" x-text="f.fatura_no + ' · Kalan: ' + fmtSayi(f.kalan) + ' ' + f.doviz + ' (' + f.durum + ')'"></option>
+            </template>
+          </select>
+          <small x-show="hareketForm.cari_id && hareketAcikFaturalar.length === 0" style="display:block; font-size:10px; color:#8A6D1B; margin-top:4px;">
+            Bu carinin açık faturası yok. Hareket genel cari hareketi olarak işlenecek.
+          </small>
+        </div>
+
+        <div class="input-box">
+          <label>Açıklama</label>
+          <textarea x-model="hareketForm.aciklama" rows="2" placeholder="İşlem açıklaması" style="resize:vertical;"></textarea>
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end; padding-top:16px; border-top:1px solid var(--border-soft);">
+          <button type="button" class="btn-action btn-outline" @click="hareketModal=false">İptal</button>
+          <button type="submit" class="btn-action"
+                  :class="hareketForm.tip === 'giris' ? 'btn-success' : 'btn-danger'">
+            <span x-text="hareketForm.tip === 'giris' ? 'Girişi Kaydet' : 'Çıkışı Kaydet'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function kasaApp() {
+  return {
+    kasalar: [],
+    seciliKasa: null,
+    hareketler: [],
+    kasaModal: false,
+    hareketModal: false,
+
+    kasaForm: { id: null, ad: '', doviz: 'TRY', baslangic_bakiye: 0, aciklama: '', banka_id: '', ana_kasa: false },
+    bankaListesi: [],
+    hareketForm: { tip: 'giris', tarih: '', tutar: '', evrak_no: '', aciklama: '', cari_id: '', fatura_id: '' },
+    hareketCariListesi: [],
+    hareketAcikFaturalar: [],
+
+    get seciliKasaObj() {
+      return this.kasalar.find(k => k.id === this.seciliKasa) || null;
+    },
+
+    async init() {
+      await this.yukle();
+      await this.bankalariYukle();
+    },
+
+    async bankalariYukle() {
+      try {
+        const res = await fetch('/api/banka').then(r => r.json());
+        this.bankaListesi = Array.isArray(res) ? res : (res.bankalar || res.data || []);
+      } catch(e) { this.bankaListesi = []; }
+    },
+
+    bankaSecildi() {
+      const b = this.bankaListesi.find(x => String(x.id) === String(this.kasaForm.banka_id));
+      if (b) {
+        this.kasaForm.doviz = b.doviz || this.kasaForm.doviz;
+        if (!this.kasaForm.ad) this.kasaForm.ad = b.banka_adi + ' ' + (b.doviz||'') + ' Kasası';
+      }
+    },
+
+    async yukle() {
+      try {
+        const res = await fetch('/api/kasa').then(r => r.json());
+        this.kasalar = Array.isArray(res) ? res : (res.kasalar || res.data || []);
+
+        if (this.kasalar.length > 0) {
+          if (!this.seciliKasa || !this.kasalar.find(k => k.id === this.seciliKasa)) {
+            this.kasaSec(this.kasalar[0].id);
+          } else {
+            await this.hareketleriYukle(this.seciliKasa);
+          }
+        }
+      } catch(e) { Utils.error('Kasalar yüklenemedi: ' + e.message); }
+    },
+
+    async kasaSec(id) {
+      this.seciliKasa = id;
+      await this.hareketleriYukle(id);
+    },
+
+    async hareketleriYukle(kasaId) {
+      try {
+        const res = await fetch(`/api/kasa/${kasaId}/hareket`).then(r => r.json());
+        this.hareketler = Array.isArray(res) ? res : (res.hareketler || res.data || []);
+      } catch(e) { this.hareketler = []; }
+    },
+
+    excelIndir() {
+      if (!this.seciliKasa) { Utils.error('Önce bir kasa seçin'); return; }
+      window.location.href = `/api/kasa/${this.seciliKasa}/hareket/excel`;
+    },
+
+    pdfYazdir() {
+      if (!this.seciliKasa) { Utils.error('Önce bir kasa seçin'); return; }
+      const kasa = this.seciliKasaObj || {};
+      const isAna = !!kasa.ana_kasa;
+      const fmt = (v) => (Number(v)||0).toLocaleString('tr-TR', {minimumFractionDigits:2, maximumFractionDigits:2});
+      let yuruyen = Number(kasa.baslangic_bakiye || 0);
+      const sirali = [...this.hareketler].reverse();
+      const satirlar = sirali.map(h => {
+        const tutar = Number(h.tutar||0);
+        if (h.tip === 'giris') yuruyen += tutar; else yuruyen -= tutar;
+        const renk = h.tip === 'giris' ? '#4A5D4E' : '#A94438';
+        const tipText = h.tip === 'giris' ? 'Giriş' : 'Çıkış';
+        const kasaHucre = isAna ? `<td style="font-size:11px; color:#6F6E68;">${h.kasa_adi || '-'}</td>` : '';
+        return `<tr>
+          <td>${h.tarih || '-'}</td>
+          ${kasaHucre}
+          <td style="color:${renk}; font-weight:600;">${tipText}</td>
+          <td style="text-align:right; font-family:monospace;">${fmt(tutar)}</td>
+          <td>${h.evrak_no || '-'}</td>
+          <td>${(h.aciklama || '').replace(/</g,'&lt;')}</td>
+          <td style="text-align:right; font-family:monospace; font-weight:600;">${fmt(yuruyen)}</td>
+        </tr>`;
+      }).join('');
+
+      const kasaBaslik = isAna ? '<th>Kasa</th>' : '';
+      const ustBaslik = isAna
+        ? `Konsolide Kasa Raporu — ${kasa.ad||''}`
+        : `Kasa Hareket Raporu — ${kasa.ad||''} (${kasa.doviz||''})`;
+      const altBilgi = isAna
+        ? `<div class="meta">${kasa.doviz} cinsindeki tüm kasaların birleşik hareketleri · ${new Date().toLocaleDateString('tr-TR')} · Toplam ${this.hareketler.length} hareket</div>`
+        : `<div class="meta">Tarih: ${new Date().toLocaleDateString('tr-TR')} · Toplam ${this.hareketler.length} hareket</div>`;
+
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Kasa Raporu — ${kasa.ad||''}</title>
+        <style>
+          body{font-family:Arial,sans-serif; padding:30px; color:#282B28;}
+          h1{font-size:18px; margin:0 0 4px;}
+          .meta{font-size:12px; color:#6F6E68; margin-bottom:16px;}
+          table{width:100%; border-collapse:collapse; font-size:12px;}
+          th{background:#232824; color:#fff; padding:8px; text-align:left; font-size:11px;}
+          td{padding:7px 8px; border-bottom:1px solid #EAE7DF;}
+          tr:nth-child(even){background:#F2EFE8;}
+          .ozet{margin-top:16px; font-size:13px; font-weight:600;}
+        </style></head><body>
+        <h1>${ustBaslik}</h1>
+        ${altBilgi}
+        <table>
+          <thead><tr><th>Tarih</th>${kasaBaslik}<th>Tip</th><th style="text-align:right;">Tutar</th><th>Evrak No</th><th>Açıklama</th><th style="text-align:right;">Bakiye</th></tr></thead>
+          <tbody>${satirlar}</tbody>
+        </table>
+        <div class="ozet">${isAna ? 'Güncel Toplam Bakiye' : 'Güncel Bakiye'}: ${fmt(kasa.bakiye)} ${kasa.doviz||''}</div>
+        </body></html>`;
+      const w = window.open('', '_blank');
+      w.document.write(html);
+      w.document.close();
+      setTimeout(() => w.print(), 300);
+    },
+
+    // ─── Kasa CRUD ───
+    kasaEkleAc() {
+      this.kasaForm = { id: null, ad: '', doviz: 'TRY', baslangic_bakiye: 0, aciklama: '', banka_id: '', ana_kasa: false };
+      this.kasaModal = true;
+    },
+
+    kasaDuzenleAc(k) {
+      this.kasaForm = {
+        id: k.id,
+        ad: k.ad,
+        doviz: k.doviz,
+        baslangic_bakiye: k.baslangic_bakiye || 0,
+        aciklama: k.aciklama || '',
+        banka_id: '',
+        ana_kasa: !!k.ana_kasa
+      };
+      this.kasaModal = true;
+    },
+
+    async kasaKaydet() {
+      if (!this.kasaForm.ad || !this.kasaForm.ad.trim()) { Utils.error('Kasa adı zorunlu'); return; }
+      if (!this.kasaForm.doviz) { Utils.error('Döviz seçin'); return; }
+      if (this.kasaForm.ana_kasa && parseFloat(this.kasaForm.baslangic_bakiye || 0) > 0) {
+        Utils.error('Ana kasaya başlangıç bakiyesi girilemez (bakiye alt kasalardan otomatik hesaplanır)');
+        return;
+      }
+
+      const url = this.kasaForm.id ? '/api/kasa/' + this.kasaForm.id : '/api/kasa';
+      const method = this.kasaForm.id ? 'PUT' : 'POST';
+
+      try {
+        const res = await fetch(url, {
+          method, headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.kasaForm)
+        });
+        const d = await res.json();
+        if (d.ok || d.id) {
+          Utils.success(this.kasaForm.id ? 'Kasa güncellendi' : 'Kasa oluşturuldu');
+          this.kasaModal = false;
+          await this.yukle();
+        } else { Utils.error(d.mesaj || 'Kayıt başarısız'); }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async kasaSil(k) {
+      if (!(await Utils.confirm('"' + k.ad + '" kasası silinecek.\n\nNot: İçinde hareket varsa silinemez.\n\nDevam?'))) return;
+      try {
+        const res = await fetch('/api/kasa/' + k.id, { method: 'DELETE' });
+        const d = await res.json();
+        if (d.ok) {
+          Utils.success('Kasa silindi');
+          if (this.seciliKasa === k.id) this.seciliKasa = null;
+          await this.yukle();
+        } else { Utils.error(d.mesaj || 'Silinemedi'); }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    // ─── Hareket ───
+    async hareketAc(tip) {
+      if (!this.seciliKasa) { Utils.error('Önce bir kasa seçin'); return; }
+      this.hareketForm = {
+        tip,
+        tarih: new Date().toISOString().slice(0,10),
+        tutar: '',
+        evrak_no: '',
+        aciklama: '',
+        cari_id: '',
+        fatura_id: ''
+      };
+      this.hareketAcikFaturalar = [];
+      this.hareketModal = true;
+      if (this.hareketCariListesi.length === 0) {
+        try {
+          const res = await fetch('/api/cari').then(r => r.json());
+          const liste = res.data || res;
+          this.hareketCariListesi = Array.isArray(liste) ? liste : [];
+        } catch(e) { this.hareketCariListesi = []; }
+      }
+    },
+
+    async acikFaturalariYukle() {
+      this.hareketForm.fatura_id = '';
+      this.hareketAcikFaturalar = [];
+      if (!this.hareketForm.cari_id) return;
+      const yon = this.hareketForm.tip === 'giris' ? 'satis' : 'alis';
+      try {
+        const res = await fetch(`/api/cari/${this.hareketForm.cari_id}/acik_faturalar?yon=${yon}`).then(r => r.json());
+        this.hareketAcikFaturalar = res.faturalar || [];
+      } catch(e) { this.hareketAcikFaturalar = []; }
+    },
+
+    faturaSecildi() {
+      const f = this.hareketAcikFaturalar.find(x => String(x.id) === String(this.hareketForm.fatura_id));
+      if (f && !this.hareketForm.tutar) {
+        this.hareketForm.tutar = f.kalan;
+      }
+    },
+
+    async hareketKaydet() {
+      const tutar = parseFloat(this.hareketForm.tutar) || 0;
+      if (tutar <= 0) { Utils.error('Geçerli bir tutar girin'); return; }
+      if (!this.hareketForm.tarih) { Utils.error('Tarih zorunlu'); return; }
+
+      try {
+        const res = await fetch('/api/kasa/hareket', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kasa_id: this.seciliKasa, ...this.hareketForm })
+        });
+        const d = await res.json();
+        if (d.ok || d.id) {
+          Utils.success(this.hareketForm.tip === 'giris' ? 'Giriş kaydedildi' : 'Çıkış kaydedildi');
+          this.hareketModal = false;
+          await this.yukle();
+        } else { Utils.error(d.mesaj || 'Kayıt başarısız'); }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async hareketSil(id) {
+      if (!(await Utils.confirm('Bu hareket silinecek. Devam?'))) return;
+      try {
+        const res = await fetch('/api/kasa/hareket/' + id, { method: 'DELETE' });
+        const d = await res.json();
+        if (d.ok) {
+          Utils.success('Silindi');
+          await this.yukle();
+        } else { Utils.error(d.mesaj || 'Silinemedi'); }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    // ─── Format ───
+    fmtSayi(v) {
+      v = parseFloat(v) || 0;
+      return v.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    },
+    fmtTarih(iso) {
+      if (!iso) return '-';
+      return new Date(iso).toLocaleDateString('tr-TR');
+    }
+  };
+}
+</script>
+{% endblock %}

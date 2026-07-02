@@ -1,0 +1,838 @@
+{% extends "base.html" %}
+{% block title %}Satışlar{% endblock %}
+{% block header_title %}Satış Kayıtları ve Ciro Defteri{% endblock %}
+{% block content %}
+<style>
+  /* ─── Üst para birimi seçici ─── */
+  .pb-selector {
+    display: flex; justify-content: flex-end; gap: 10px;
+    align-items: center; margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .pb-toggle {
+    display: inline-flex; background: var(--border-soft);
+    border-radius: 8px; padding: 3px; gap: 2px;
+  }
+  .pb-toggle button {
+    padding: 6px 14px; background: transparent;
+    border: none; border-radius: 6px;
+    font-weight: 600; cursor: pointer;
+    font-size: 12px; color: var(--text-muted);
+    transition: all 0.2s ease;
+  }
+  .pb-toggle button.aktif {
+    background: var(--bg-surface); color: var(--primary);
+    font-weight: 700; box-shadow: 0 2px 6px rgba(35,40,36,0.05);
+  }
+
+  /* ─── Özet kartlar ─── */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 18px; margin-bottom: 28px;
+  }
+  .satis-ozet-kart {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    box-shadow: var(--shadow-blur);
+    display: flex; flex-direction: column;
+    border-top: 3px solid transparent;
+    transition: all 0.25s ease;
+  }
+  .satis-ozet-kart:hover {
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-2px);
+  }
+  .satis-ozet-kart .label {
+    font-size: 11px; color: var(--text-muted);
+    font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .satis-ozet-kart .val {
+    font-size: 22px; font-weight: 800;
+    margin-top: 8px; font-family: monospace;
+    color: var(--primary);
+  }
+
+  /* ─── Filtre barı ─── */
+  .satis-filter-bar {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 24px; align-items: flex-end;
+    background: var(--bg-surface); padding: 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-blur);
+  }
+  .satis-filter-bar .filter-item {
+    display: flex; flex-direction: column; gap: 6px;
+    min-width: 140px;
+  }
+  .satis-filter-bar label {
+    font-size: 11px; font-weight: 700; color: var(--text-light);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .satis-filter-bar select, .satis-filter-bar input {
+    padding: 10px 14px; border: 1px solid var(--border-mid);
+    border-radius: var(--radius-sm); font-size: 13px;
+    background: var(--bg-surface); color: var(--text-main);
+    outline: none;
+  }
+  .satis-filter-bar select:focus, .satis-filter-bar input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(35,40,36,0.04);
+  }
+  .filter-search { flex: 1; min-width: 220px; }
+
+  /* ─── Tablo ─── */
+  .data-table-wrapper {
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-blur);
+    overflow-x: auto; margin-bottom: 24px;
+  }
+  .satis-tbl {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+  }
+  .satis-tbl th {
+    background: var(--bg-body); padding: 14px 20px;
+    text-align: left; font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-muted); font-weight: 600;
+    border-bottom: 1px solid var(--border-soft);
+    letter-spacing: 0.5px; white-space: nowrap;
+  }
+  .satis-tbl td {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text-main); vertical-align: middle;
+  }
+  .satis-tbl tr:hover { background-color: var(--row-hover); }
+  .satis-tbl tr:last-child td { border-bottom: none; }
+
+  .badge-fatura {
+    padding: 4px 10px; border-radius: 30px;
+    font-size: 11px; font-weight: 600;
+    display: inline-flex; border: 1px solid;
+  }
+  .satis-fatura-yok {
+    background: var(--warn-bg); color: #8A6D1B;
+    border-color: #E8DCB0;
+  }
+  .satis-fatura-var {
+    background: var(--success-bg); color: var(--success);
+    font-family: monospace; border-color: #CBD6CC;
+  }
+
+  /* ─── Sayfalama ─── */
+  .pagination {
+    display: flex; justify-content: center; gap: 6px;
+    margin: 16px 0;
+  }
+  .pagination button {
+    min-width: 36px; height: 36px; padding: 0 12px;
+    border: 1px solid var(--border-mid);
+    background: var(--bg-surface);
+    border-radius: 8px;
+    cursor: pointer; font-weight: 600;
+    transition: all 0.2s ease;
+  }
+  .pagination button:hover:not(:disabled) {
+    background: var(--border-soft);
+  }
+  .pagination button.aktif {
+    background: var(--primary); color: #fff;
+    border-color: var(--primary);
+  }
+  .pagination button:disabled {
+    opacity: 0.5; cursor: not-allowed;
+  }
+
+  /* ─── Marj badge ─── */
+  .marj-badge {
+    display: inline-block;
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 700;
+    font-family: monospace;
+  }
+  .marj-yuksek { background: var(--success-bg); color: var(--success); }
+  .marj-orta { background: var(--warn-bg); color: #8A6D1B; }
+  .marj-dusuk { background: var(--danger-bg); color: var(--danger); }
+
+  /* ─── Modal ─── */
+  .input-box { margin-bottom: 14px; }
+  .input-box label {
+    display: block; font-size: 11px; font-weight: 700;
+    color: var(--text-light); text-transform: uppercase;
+    margin-bottom: 6px; letter-spacing: 0.3px;
+  }
+  .input-box input, .input-box textarea {
+    width: 100%; padding: 10px 14px;
+    border: 1px solid var(--border-mid);
+    border-radius: var(--radius-sm); font-size: 13px;
+    outline: none; font-family: inherit;
+    background: var(--bg-surface);
+  }
+  .input-box input:focus, .input-box textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(35,40,36,0.04);
+  }
+  .form-col-2 {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin-bottom: 14px;
+  }
+  @media (max-width: 600px) { .form-col-2 { grid-template-columns: 1fr; } }
+
+  .ozet-row {
+    display: flex; justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    font-size: 13px;
+  }
+  .ozet-row .lbl { color: var(--text-muted); font-weight: 600; }
+  .ozet-row .val { font-weight: 700; font-family: monospace; }
+  /* ═══ Satış Performansı widget (dashboard'dan taşındı) ═══ */
+  .perf-kpi-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px; margin-bottom: 24px;
+  }
+  .perf-kpi {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 20px 22px;
+    box-shadow: var(--shadow-blur);
+    transition: all 0.2s; position: relative;
+  }
+  .perf-kpi-label {
+    font-size: 11px; font-weight: 700;
+    color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 8px;
+  }
+  .perf-kpi-val {
+    font-size: 32px; font-weight: 800;
+    color: var(--primary); line-height: 1.1;
+  }
+  .perf-kpi-val.green { color: var(--success); }
+  .perf-bolum-baslik {
+    font-size: 14px; font-weight: 700;
+    color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin: 24px 0 14px 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .grafik-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 20px 24px;
+    box-shadow: var(--shadow-blur); margin-bottom: 24px;
+  }
+  .grafik-card-title {
+    font-size: 14px; font-weight: 700;
+    color: var(--text-main); margin-bottom: 18px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .bar-container {
+    display: flex; align-items: flex-end; gap: 14px;
+    height: 200px; padding: 0 8px;
+  }
+  .bar-col {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; height: 100%; min-width: 30px;
+  }
+  .bar-stack {
+    flex: 1; display: flex; flex-direction: column;
+    justify-content: flex-end; width: 100%; gap: 2px;
+  }
+  .bar-segment { min-height: 2px; transition: height 0.3s; border-radius: 4px 4px 0 0; }
+  .bar-segment.satis { background: var(--info); }
+  .bar-segment.kar   { background: var(--primary-light); border-radius: 0 0 4px 4px; }
+  .bar-label-ay { font-size: 11px; color: var(--text-muted); margin-top: 8px; text-align: center; font-weight: 600; }
+  .bar-label-deger { font-size: 11px; font-weight: 700; color: var(--info); margin-top: 2px; }
+  .grafik-legend { display: flex; gap: 20px; margin-top: 16px; justify-content: center; font-size: 12px; color: var(--text-muted); }
+  .grafik-legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch { display: inline-block; width: 14px; height: 14px; border-radius: 3px; }
+
+  /* ─── En kârlı müşteri / cins panelleri ─── */
+  .iki-panel {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 18px; margin-bottom: 24px;
+    align-items: start;
+  }
+  .panel-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-blur);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .panel-card-header {
+    padding: 16px 20px;
+    font-size: 13px; font-weight: 700;
+    color: var(--text-main);
+    background: var(--bg-body);
+    border-bottom: 1px solid var(--border-soft);
+    display: flex; align-items: center; gap: 9px;
+  }
+  .panel-card-header::before {
+    content: ''; width: 4px; height: 16px; border-radius: 3px;
+    background: var(--accent); flex-shrink: 0;
+  }
+  .panel-card-body { padding: 4px 0; }
+  .mini-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .mini-tbl th {
+    text-align: left; padding: 11px 20px;
+    font-size: 10.5px; font-weight: 700;
+    color: var(--text-light); text-transform: uppercase;
+    letter-spacing: 0.5px; border-bottom: 1px solid var(--border-soft);
+    white-space: nowrap;
+  }
+  .mini-tbl td {
+    padding: 12px 20px; border-bottom: 1px solid var(--border-soft);
+    color: var(--text-main); vertical-align: middle;
+  }
+  .mini-tbl tbody tr:last-child td { border-bottom: none; }
+  .mini-tbl tbody tr:hover td { background: var(--row-hover); }
+  .mini-tbl .r { text-align: right; font-family: monospace; white-space: nowrap; }
+  .mini-tbl th.r { font-family: inherit; }
+  .empty-msg {
+    text-align: center !important; color: var(--text-light);
+    font-size: 13px; padding: 36px 20px !important; font-style: italic;
+  }
+</style>
+
+<div x-data="satisApp()" x-init="init()">
+
+  <!-- Para birimi seçici -->
+  <div class="pb-selector">
+    <span style="font-size:12px; color:var(--text-muted); font-weight:600;">Görüntüleme Para Birimi:</span>
+    <div class="pb-toggle">
+      <template x-for="pb in ['USD', 'TRY', 'EUR']" :key="pb">
+        <button @click="degistirPB(pb)" :class="aktifPB === pb ? 'aktif' : ''" x-text="pb"></button>
+      </template>
+    </div>
+    <span x-show="aktifPB !== 'USD'" style="font-size:11px; color:var(--text-light);">
+      Kur: USD=<span x-text="kurUSD.toFixed(4)"></span>
+      <span x-show="aktifPB === 'EUR'"> · EUR=<span x-text="kurEUR.toFixed(4)"></span></span>
+    </span>
+  </div>
+
+  <!-- Özet grid -->
+  <div class="dashboard-grid">
+    <div class="satis-ozet-kart" style="border-top-color:var(--info);">
+      <div class="label">Satış Kayıt Adedi</div>
+      <div class="val" x-text="ozet.adet || 0"></div>
+    </div>
+    <div class="satis-ozet-kart" style="border-top-color:var(--success);">
+      <div class="label">Brüt Ciro</div>
+      <div class="val" style="color:var(--success);" x-text="formatPB(ozet.toplam_usd)"></div>
+    </div>
+    <div class="satis-ozet-kart" style="border-top-color:var(--danger);">
+      <div class="label">Toplam Alış Maliyeti</div>
+      <div class="val" style="color:var(--danger);" x-text="formatPB(ozet.maliyet_usd)"></div>
+    </div>
+    <div class="satis-ozet-kart" style="border-top-color:var(--primary-light);">
+      <div class="label">Net Karlılık</div>
+      <div class="val" style="color:var(--primary-light);" x-text="formatPB(ozet.kar_usd)"></div>
+    </div>
+  </div>
+
+  <!-- ═══ SATIŞ PERFORMANSI (Dashboard'dan taşındı) ═══ -->
+  <div x-data="satisWidget()" x-init="yukle()">
+    <div class="perf-bolum-baslik">Satış Performansı (Analitik)</div>
+
+    <!-- Satış özet kartları -->
+    <div class="perf-kpi-grid">
+      <div class="perf-kpi" style="border-left:4px solid var(--success);">
+        <div class="perf-kpi-label" style="color: var(--success);">Bu Ay Satış</div>
+        <div class="perf-kpi-val green" x-text="'$' + fmt(buAy.satis)"></div>
+        <div style="margin-top: 10px; font-size: 12px; color: var(--text-muted);">
+          <span x-text="buAy.adet"></span> satış · Kâr: $<span x-text="fmt(buAy.kar)"></span>
+        </div>
+      </div>
+      <div class="perf-kpi" style="border-left:4px solid var(--info);">
+        <div class="perf-kpi-label" style="color: var(--info);">Toplam Satış</div>
+        <div class="perf-kpi-val" style="color: var(--info);" x-text="'$' + fmt(genel.toplam_satis)"></div>
+        <div style="margin-top: 10px; font-size: 12px; color: var(--text-muted);">
+          Tüm zamanlar · <span x-text="genel.toplam_adet"></span> kayıt
+        </div>
+      </div>
+      <div class="perf-kpi" style="border-left:4px solid var(--primary-light);">
+        <div class="perf-kpi-label" style="color: var(--primary-light);">Toplam Kâr</div>
+        <div class="perf-kpi-val" style="color: var(--primary-light);" x-text="'$' + fmt(genel.toplam_kar)"></div>
+        <div style="margin-top: 10px; font-size: 12px; color: var(--text-muted);">
+          Ort. marj: <span x-text="genel.ort_marj"></span>%
+        </div>
+      </div>
+      <div class="perf-kpi" style="border-left:4px solid var(--accent);">
+        <div class="perf-kpi-label" style="color: var(--accent);">Faturasız Satış</div>
+        <div class="perf-kpi-val" style="color: var(--accent);" x-text="genel.faturasiz"></div>
+        <div style="margin-top: 10px; font-size: 12px; color: var(--text-muted);">
+          Fatura no bekliyor
+        </div>
+      </div>
+    </div>
+
+    <!-- Aylık satış grafiği -->
+    <div class="grafik-card">
+      <div class="grafik-card-title">Son 6 Ay Satış & Kâr Performansı</div>
+      <div class="bar-container" x-show="aylik.length > 0">
+        <template x-for="(a, idx) in aylik" :key="idx">
+          <div class="bar-col">
+            <div class="bar-stack">
+              <div class="bar-segment kar"
+                   :style="'height:' + barYukseklik(a.kar_usd) + '%'"
+                   :title="'Kâr: $' + fmt(a.kar_usd)"></div>
+              <div class="bar-segment satis"
+                   :style="'height:' + barYukseklik(a.satis_usd) + '%'"
+                   :title="'Satış: $' + fmt(a.satis_usd)"></div>
+            </div>
+            <div class="bar-label-ay" x-text="a.ay"></div>
+            <div class="bar-label-deger" x-text="'$' + fmtKisa(a.satis_usd)"></div>
+          </div>
+        </template>
+      </div>
+      <div x-show="aylik.length === 0" class="empty-msg" style="padding: 40px;">
+        Henüz satış verisi yok.
+      </div>
+      <div class="grafik-legend" x-show="aylik.length > 0">
+        <div class="grafik-legend-item">
+          <span class="legend-swatch" style="background: var(--info);"></span> Satış
+        </div>
+        <div class="grafik-legend-item">
+          <span class="legend-swatch" style="background: var(--primary-light);"></span> Kâr
+        </div>
+      </div>
+    </div>
+
+    <!-- En karlı müşteri & cins -->
+    <div class="iki-panel">
+      <div class="panel-card">
+        <div class="panel-card-header" style="font-weight: 400">En Kârlı Müşteriler</div>
+        <div class="panel-card-body">
+          <table class="mini-tbl">
+            <thead><tr><th>Müşteri</th><th class="r">Satış</th><th class="r">Kâr</th></tr></thead>
+            <tbody>
+              <template x-for="m in enKarliMusteri" :key="m.musteri">
+                <tr>
+                  <td style="font-weight:600;" x-text="m.musteri"></td>
+                  <td class="r" x-text="'$' + fmt(m.satis_usd)"></td>
+                  <td class="r" style="color: var(--success); font-weight:700;" x-text="'$' + fmt(m.kar_usd)"></td>
+                </tr>
+              </template>
+              <tr x-show="enKarliMusteri.length === 0">
+                <td colspan="3" class="empty-msg">Henüz satış kaydı yok</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-card-header">En Kârlı Ürün Cinsleri</div>
+        <div class="panel-card-body">
+          <table class="mini-tbl">
+            <thead><tr><th>Cins</th><th class="r">Adet</th><th class="r">Satış</th><th class="r">Kâr</th></tr></thead>
+            <tbody>
+              <template x-for="c in enKarliCins" :key="c.cins">
+                <tr>
+                  <td style="font-weight:600;" x-text="c.cins"></td>
+                  <td class="r" x-text="c.adet"></td>
+                  <td class="r" x-text="'$' + fmt(c.satis_usd)"></td>
+                  <td class="r" style="color: var(--success); font-weight:700;" x-text="'$' + fmt(c.kar_usd)"></td>
+                </tr>
+              </template>
+              <tr x-show="enKarliCins.length === 0">
+                <td colspan="4" class="empty-msg">Henüz satış kaydı yok</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- Filtre -->
+  <div class="satis-filter-bar">
+    <div class="filter-item">
+      <label>Müşteri</label>
+      <select x-model="filtre.musteri" @change="sayfaSifirla(); listele()">
+        <option value="">Tümü</option>
+        <template x-for="m in lookup.musteriler"><option :value="m" x-text="m"></option></template>
+      </select>
+    </div>
+    <div class="filter-item">
+      <label>Stok Tipi</label>
+      <select x-model="filtre.stok_tip" @change="sayfaSifirla(); listele()">
+        <option value="">Tümü</option>
+        <option value="BLOK">BLOK</option>
+        <option value="PLAKA">PLAKA</option>
+        <option value="EBATLI">EBATLI</option>
+      </select>
+    </div>
+    <div class="filter-item">
+      <label>Taş Cinsi</label>
+      <select x-model="filtre.cins" @change="sayfaSifirla(); listele()">
+        <option value="">Tümü</option>
+        <template x-for="c in lookup.cinsler"><option :value="c" x-text="c"></option></template>
+      </select>
+    </div>
+    <div class="filter-item">
+      <label>Fatura Filtresi</label>
+      <select x-model="filtre.fatura_durum" @change="sayfaSifirla(); listele()">
+        <option value="">Hepsi</option>
+        <option value="var">Faturalandırılmış</option>
+        <option value="yok">Faturasızlar</option>
+      </select>
+    </div>
+    <div class="filter-item">
+      <label>Başlangıç Tarihi</label>
+      <input type="date" x-model="filtre.bas_tarih" @change="sayfaSifirla(); listele()">
+    </div>
+    <div class="filter-item">
+      <label>Bitiş Tarihi</label>
+      <input type="date" x-model="filtre.son_tarih" @change="sayfaSifirla(); listele()">
+    </div>
+    <div class="filter-item filter-search">
+      <label>Akıllı Arama</label>
+      <input type="text" x-model="filtre.ara" @input.debounce.300ms="sayfaSifirla(); listele()"
+             placeholder="ID, Blok No, Fatura No, Sipariş...">
+    </div>
+  </div>
+
+  <!-- Tablo -->
+  <div class="data-table-wrapper">
+    <table class="satis-tbl">
+      <thead>
+        <tr>
+          <th>Tarih</th>
+          <th>Stok ID</th>
+          <th>Tip / Cins</th>
+          <th>Müşteri</th>
+          <th>Sipariş Ref</th>
+          <th style="text-align:right;">Miktar</th>
+          <th style="text-align:right;">Tutar</th>
+          <th style="text-align:right;">Net Kar</th>
+          <th style="text-align:center;">Marj</th>
+          <th>Fatura Durumu</th>
+          <th style="width:80px; text-align:right;">İşlem</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="s in rows" :key="s.id">
+          <tr>
+            <td style="font-size:12px; color:var(--text-muted); font-weight:600;" x-text="formatTarih(s.satis_tarihi)"></td>
+            <td style="font-family:monospace; font-weight:700; color:var(--info);" x-text="s.stok_id"></td>
+            <td>
+              <span style="font-weight:600;" x-text="s.stok_tip"></span>
+              <div style="font-size:11px; color:var(--text-light);" x-text="s.cins"></div>
+            </td>
+            <td style="font-weight:600;" x-text="s.musteri"></td>
+            <td style="font-family:monospace; font-size:12px; color:var(--text-muted);" x-text="s.siparis_id || '-'"></td>
+            <td style="text-align:right; font-family:monospace;" x-text="Utils.fmt3(s.miktar||0) + ' ' + (s.birim || '')"></td>
+            <td style="text-align:right; font-weight:700;" x-text="formatPB(s.tutar_usd)"></td>
+            <td style="text-align:right; font-weight:600;"
+                :style="(s.kar_usd||0) >= 0 ? 'color:var(--success);' : 'color:var(--danger);'"
+                x-text="formatPB(s.kar_usd)"></td>
+            <td style="text-align:center;">
+              <span class="marj-badge" :class="marjClass(s.marj_yuzde)" x-text="Utils.fmt3(s.marj_yuzde||0) + '%'"></span>
+            </td>
+            <td>
+              <span class="badge-fatura" :class="s.fatura_no ? 'satis-fatura-var' : 'satis-fatura-yok'"
+                    x-text="s.fatura_no || 'Faturasız'"></span>
+            </td>
+            <td style="text-align:right;">
+              <button class="btn btn-secondary" style="padding:5px 10px; font-size:11px;" @click="duzenleAc(s)">
+                Düzenle
+              </button>
+            </td>
+          </tr>
+        </template>
+        <tr x-show="rows.length === 0">
+          <td colspan="11" style="text-align:center; padding:50px; color:var(--text-light);">
+            Bu kriterlere uygun satış kaydı bulunamadı
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Sayfalama -->
+  <div class="pagination" x-show="meta.pages > 1">
+    <button @click="sayfaDegistir(1)" :disabled="meta.page === 1">«</button>
+    <button @click="sayfaDegistir(meta.page - 1)" :disabled="meta.page === 1">‹</button>
+
+    <template x-for="p in sayfaListesi" :key="p">
+      <button @click="sayfaDegistir(p)" :class="p === meta.page ? 'aktif' : ''" x-text="p"></button>
+    </template>
+
+    <button @click="sayfaDegistir(meta.page + 1)" :disabled="meta.page >= meta.pages">›</button>
+    <button @click="sayfaDegistir(meta.pages)" :disabled="meta.page >= meta.pages">»</button>
+
+    <span style="display:flex; align-items:center; font-size:12px; color:var(--text-muted); margin-left:12px;">
+      Sayfa <strong x-text="meta.page"></strong> / <strong x-text="meta.pages"></strong>
+      (Toplam <strong x-text="meta.total"></strong> kayıt)
+    </span>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       DÜZENLEME MODAL
+       ════════════════════════════════════════════════════ -->
+  <div class="modal-bg" x-show="modal" x-cloak @click.self="modal=false">
+    <div class="modal" style="width:min(600px, 95vw); max-height:90vh; overflow-y:auto;">
+      <div class="modal-title">
+        Satış Verisi Güncelleme
+        <span class="modal-close" @click="modal=false">×</span>
+      </div>
+
+      <!-- Üst bilgi kutusu -->
+      <div style="background:var(--bg-body); border:1px solid var(--border-soft); border-radius:var(--radius-md); padding:14px; margin-bottom:18px;">
+        <div class="ozet-row">
+          <span class="lbl">Stok ID:</span>
+          <span class="val" style="color:var(--info); font-family:monospace;" x-text="form.stok_id"></span>
+        </div>
+        <div class="ozet-row">
+          <span class="lbl">Müşteri:</span>
+          <span class="val" x-text="form.musteri"></span>
+        </div>
+        <div class="ozet-row">
+          <span class="lbl">Stok Tipi / Cins:</span>
+          <span class="val" x-text="(form.stok_tip || '') + ' · ' + (form.cins || '')"></span>
+        </div>
+        <div class="ozet-row" x-show="form.siparis_id">
+          <span class="lbl">Sipariş:</span>
+          <span class="val" style="color:var(--info); font-family:monospace;" x-text="form.siparis_id"></span>
+        </div>
+        <div class="ozet-row" style="border-top:1px dashed var(--border-mid); margin-top:8px; padding-top:8px;">
+          <span class="lbl">Tutar:</span>
+          <span class="val" style="color:var(--success); font-size:14px;" x-text="formatPB(form.tutar_usd)"></span>
+        </div>
+        <div class="ozet-row">
+          <span class="lbl">Net Kar:</span>
+          <span class="val" :style="(form.kar_usd||0)>=0?'color:var(--success);':'color:var(--danger);'" x-text="formatPB(form.kar_usd)"></span>
+        </div>
+        <div class="ozet-row">
+          <span class="lbl">Marj:</span>
+          <span class="marj-badge" :class="marjClass(form.marj_yuzde)" x-text="Utils.fmt3(form.marj_yuzde||0) + '%'"></span>
+        </div>
+      </div>
+
+      <div class="input-box">
+        <label>Resmi Fatura Numarası</label>
+        <input type="text" x-model="form.fatura_no" placeholder="Örn: MIL2026000123">
+      </div>
+
+      <div class="form-col-2">
+        <div class="input-box">
+          <label>Fatura Tarihi</label>
+          <input type="date" x-model="form.fatura_tarihi">
+        </div>
+        <div class="input-box">
+          <label>Müşteri Teslim Tarihi</label>
+          <input type="date" x-model="form.teslim_tarihi">
+        </div>
+      </div>
+
+      <div class="input-box">
+        <label>Dahili Notlar</label>
+        <textarea x-model="form.notlar" rows="3" placeholder="Bu satış kaydına özel notlar..." style="resize:vertical;"></textarea>
+      </div>
+
+      <div style="background:var(--info-bg); border:1px solid #C4D2E6; color:var(--info); padding:10px 14px; border-radius:var(--radius-sm); font-size:12px; margin-bottom:16px;">
+        ℹFatura no girildiğinde "Faturalandırılmış" olarak işaretlenir. Tutar / Kar değerleri stok hareket kaydından çekilir, manuel değiştirilemez.
+      </div>
+
+      <div style="display:flex; gap:10px; justify-content:flex-end; padding-top:16px; border-top:1px solid var(--border-soft);">
+        <button class="btn btn-secondary" @click="modal=false">Vazgeç</button>
+        <button class="btn btn-primary" @click="kaydet()">Değişiklikleri Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function satisApp() {
+  return {
+    rows: [],
+    meta: { page: 1, pages: 1, total: 0, per_page: 25 },
+    ozet: { adet: 0, toplam_usd: 0, maliyet_usd: 0, kar_usd: 0 },
+    aktifPB: 'USD',
+    kurUSD: 1,
+    kurEUR: 1,
+    filtre: {
+      musteri: '', stok_tip: '', cins: '', fatura_durum: '',
+      bas_tarih: '', son_tarih: '', ara: ''
+    },
+    lookup: { musteriler: [], cinsler: [] },
+    modal: false,
+    form: {},
+
+    get sayfaListesi() {
+      const pages = [];
+      const total = this.meta.pages || 1;
+      const cur = this.meta.page || 1;
+      const start = Math.max(1, cur - 2);
+      const end = Math.min(total, cur + 2);
+      for (let i = start; i <= end; i++) pages.push(i);
+      return pages;
+    },
+
+    async init() {
+      try {
+        const lr = await fetch('/api/satislar/lookup').then(r => r.json());
+        this.lookup.musteriler = lr.musteriler || [];
+        this.lookup.cinsler = lr.cinsler || [];
+      } catch(e) { console.error('lookup yüklenemedi', e); }
+
+      // Kurları çek
+      await this.kurlariYukle();
+      await this.listele();
+    },
+
+    async kurlariYukle() {
+      try {
+        const usdRes = await fetch('/api/doviz_kur?doviz=USD').then(r => r.json()).catch(() => null);
+        if (usdRes) {
+          this.kurUSD = parseFloat(usdRes.alis) || parseFloat(usdRes.satis) || parseFloat(usdRes.efektif) || 1;
+        }
+        const eurRes = await fetch('/api/doviz_kur?doviz=EUR').then(r => r.json()).catch(() => null);
+        if (eurRes) {
+          this.kurEUR = parseFloat(eurRes.alis) || parseFloat(eurRes.satis) || parseFloat(eurRes.efektif) || 1;
+        }
+      } catch(e) {
+        this.kurUSD = 1; this.kurEUR = 1;
+      }
+    },
+
+    async listele() {
+      const p = new URLSearchParams({ page: this.meta.page });
+      Object.entries(this.filtre).forEach(([k, v]) => { if (v) p.set(k, v); });
+      try {
+        const r = await fetch('/api/satislar?' + p).then(r => r.json());
+        this.rows = r.data || [];
+        this.meta = r.meta || this.meta;
+        this.ozet = r.ozet || this.ozet;
+      } catch(e) { Utils.error('Liste yüklenemedi: ' + e.message); }
+    },
+
+    sayfaSifirla() { this.meta.page = 1; },
+    sayfaDegistir(yeniSayfa) {
+      if (yeniSayfa < 1 || yeniSayfa > this.meta.pages) return;
+      this.meta.page = yeniSayfa;
+      this.listele();
+    },
+
+    duzenleAc(s) {
+      this.form = { ...s };
+      this.modal = true;
+    },
+
+    async kaydet() {
+      try {
+        const r = await fetch('/api/satislar/' + this.form.id + '/fatura', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fatura_no: this.form.fatura_no || '',
+            fatura_tarihi: this.form.fatura_tarihi || '',
+            teslim_tarihi: this.form.teslim_tarihi || '',
+            notlar: this.form.notlar || ''
+          })
+        });
+        const d = await r.json();
+        if (d.ok) {
+          Utils.success('Satış kaydı güncellendi');
+          this.modal = false;
+          await this.listele();
+        } else { Utils.error(d.mesaj || 'Hata'); }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    degistirPB(pb) { this.aktifPB = pb; },
+
+    /**
+     * USD bazındaki değeri seçili para birimine çevirir
+     * Backend tüm tutarları USD bazında dönderir (toplam_usd, kar_usd, maliyet_usd...)
+     */
+    formatPB(usdDeger) {
+      let deger = parseFloat(usdDeger) || 0;
+      if (this.aktifPB === 'USD') {
+        // Zaten USD
+      } else if (this.aktifPB === 'TRY') {
+        deger = deger * this.kurUSD;
+      } else if (this.aktifPB === 'EUR') {
+        if (this.kurEUR > 0) {
+          // USD → EUR: önce TRY'ye, sonra TRY/EUR
+          deger = (deger * this.kurUSD) / this.kurEUR;
+        }
+      }
+      return deger.toLocaleString('tr-TR', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2
+      }) + ' ' + this.aktifPB;
+    },
+
+    formatTarih(iso) {
+      return iso ? new Date(iso).toLocaleDateString('tr-TR') : '-';
+    },
+
+    marjClass(marj) {
+      const m = parseFloat(marj) || 0;
+      if (m >= 25) return 'marj-yuksek';
+      if (m >= 10) return 'marj-orta';
+      return 'marj-dusuk';
+    }
+  };
+}
+
+// ═══ Satış Performansı widget (dashboard'dan taşındı) ═══
+function satisWidget() {
+  return {
+    aylik: [],
+    enKarliMusteri: [],
+    enKarliCins: [],
+    genel: { toplam_satis: 0, toplam_kar: 0, toplam_adet: 0, ort_marj: 0, faturasiz: 0 },
+    buAy: { satis: 0, kar: 0, adet: 0 },
+    maxDeger: 1,
+
+    async yukle() {
+      try {
+        const d = await fetch('/api/dashboard/satis_istatistik').then(r => r.json());
+        this.aylik = d.aylik || [];
+        this.enKarliMusteri = d.en_karli_musteri || [];
+        this.enKarliCins = d.en_karli_cins || [];
+        this.genel = d.genel || this.genel;
+        this.buAy = d.bu_ay || this.buAy;
+        // Bar grafiği için max referans (satış + kâr ayrı renkler, üst üste stack)
+        this.maxDeger = Math.max(1, ...this.aylik.map(a => (a.satis_usd || 0) + (a.kar_usd || 0)));
+      } catch(e) {
+        console.error('Satış istatistik hatası:', e);
+      }
+    },
+
+    barYukseklik(deger) {
+      return Math.min(100, ((deger || 0) / this.maxDeger) * 100);
+    },
+
+    fmt(n) {
+      n = parseFloat(n) || 0;
+      return n.toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+    },
+
+    fmtKisa(n) {
+      n = parseFloat(n) || 0;
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+      if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+      return n.toFixed(0);
+    }
+  };
+}
+
+</script>
+{% endblock %}

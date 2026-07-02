@@ -1,0 +1,53 @@
+# ============================================================
+#  Milestone ERP — Windows için Python Gereksinimleri
+#  (Mermer İhracat Yönetim Sistemi)
+#
+#  Kurulum (PowerShell veya CMD, proje klasöründe):
+#    python -m venv .venv
+#    .venv\Scripts\activate
+#    pip install -r requirements_windows.txt
+#
+#  Başlatma:
+#    python -m uvicorn server:app --host 127.0.0.1 --port 8001
+#
+#  NOT: Orijinal requirements.txt 130+ paket içeriyordu (boto3,
+#  google-ai, openai, mongo, stripe, pandas, numpy vb. — hiçbiri
+#  uygulamada kullanılmıyordu). Bu liste sadece GERÇEKTEN import
+#  edilen paketleri içerir; kurulum çok daha hızlı ve sorunsuzdur.
+# ============================================================
+
+# ----- Web çatısı (Flask + Jinja şablonları) -----
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+Flask-Migrate==4.0.7
+Werkzeug==3.0.6
+Jinja2==3.1.6
+
+# ----- ORM / Veritabanı -----
+SQLAlchemy==2.0.50
+# PostgreSQL sürücüsü — Windows'ta hazır wheel olarak gelir,
+# Visual C++ derleme aracı GEREKTİRMEZ.
+psycopg2-binary==2.9.10
+
+# ----- ASGI sunucu katmanı (server.py FastAPI köprüsü) -----
+fastapi==0.110.1
+starlette==0.37.2
+a2wsgi==1.10.7
+uvicorn==0.25.0
+# uvicorn hızlandırıcıları — Windows uyumlu olanlar açıkça belirtildi.
+# (uvicorn[standard] yazsaydık uvloop'u çekmeye çalışırdı; uvloop
+#  Windows'ta DESTEKLENMEZ. Bu yüzden Windows'ta çalışanları tek tek
+#  yazdık: httptools, websockets, watchfiles.)
+httptools==0.6.4
+websockets==16.0
+watchfiles==1.2.0
+
+# ----- Yardımcılar -----
+python-dotenv==1.2.2
+requests==2.34.2
+
+# ----- Dışa aktarma (Excel + PDF) -----
+# openpyxl: liste/rapor Excel (.xlsx) çıktıları
+# reportlab: liste/rapor PDF çıktıları (Türkçe karakter destekli)
+openpyxl==3.1.5
+reportlab==4.2.5

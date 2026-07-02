@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+{% block title %}Raporlar{% endblock %}
+{% block header_title %}İcra Raporları ve Stratejik Analizler{% endblock %}
+{% block content %}
+<style>
+  /* ════════════════════════════════════════════════════
+     RAPORLAR — LIGHT LUXURY TASARIM
+     ════════════════════════════════════════════════════ */
+
+  /* Sekme bar */
+  .rapor-tab-container {
+    display: flex; gap: 4px; margin-bottom: 24px;
+    border-bottom: 2px solid var(--border-soft);
+    background: var(--bg-surface);
+    padding: 12px 16px 0 16px;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    box-shadow: var(--shadow-blur);
+    flex-wrap: wrap;
+  }
+  .rapor-tab-btn {
+    padding: 12px 20px; background: none;
+    color: var(--text-muted); border: none;
+    cursor: pointer; font-weight: 600; font-size: 13px;
+    border-bottom: 3px solid transparent;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .rapor-tab-btn:hover { color: var(--primary); }
+  .rapor-tab-btn.active {
+    color: var(--primary); border-bottom-color: var(--primary);
+    font-weight: 700;
+  }
+
+  /* Filtre bar */
+  .satis-filter-bar {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    align-items: flex-end; margin-bottom: 24px;
+    background: var(--bg-surface); padding: 18px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-blur);
+  }
+  .filter-item { display: flex; flex-direction: column; gap: 6px; min-width: 160px; }
+  .filter-item label {
+    font-size: 11px; font-weight: 700;
+    color: var(--text-light); text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .filter-item select, .filter-item input {
+    padding: 10px 14px; border: 1px solid var(--border-mid);
+    border-radius: var(--radius-sm); background: var(--bg-surface);
+    color: var(--text-main); font-size: 13px;
+    outline: none; transition: border-color 0.2s;
+    font-family: inherit;
+  }
+  .filter-item select:focus, .filter-item input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(35, 40, 36, 0.04);
+  }
+
+  /* Butonlar */
+  .btn {
+    padding: 9px 18px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    border: 1px solid transparent; transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .btn-primary:hover { background: var(--primary-light); }
+  .btn-outline { background: transparent; color: var(--text-main); border-color: var(--border-mid); }
+  .btn-outline:hover { background: var(--row-hover); }
+
+  /* Yaşlandırma kart grid */
+  .yas-cards-layout {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px; margin-bottom: 28px;
+  }
+  .yas-grup-kart {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 20px; text-align: center;
+    box-shadow: var(--shadow-blur);
+  }
+  .yas-grup-kart .lbl {
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .yas-grup-kart .val {
+    font-size: 20px; font-weight: 700;
+    color: var(--primary); margin-top: 8px;
+    font-family: monospace;
+  }
+  .yas-grup-kart .sub {
+    font-size: 11px; color: var(--text-light); margin-top: 4px;
+  }
+
+  /* Rapor tablosu */
+  .report-table-box {
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-blur);
+    overflow: hidden; margin-bottom: 24px;
+  }
+  .report-table-scroll { overflow-x: auto; }
+  .tbl-yas { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .tbl-yas th {
+    background: var(--bg-body); color: var(--text-muted);
+    padding: 14px 16px; font-weight: 600;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.5px; text-align: left;
+    white-space: nowrap;
+  }
+  .tbl-yas td {
+    padding: 14px 16px; border-bottom: 1px solid var(--border-soft);
+    color: var(--text-main); vertical-align: middle;
+  }
+  .tbl-yas tr:hover td { background-color: var(--row-hover); }
+  .tbl-yas .sayi { text-align: right; font-family: monospace; font-weight: 600; }
+
+  /* Renk yardımcıları */
+  .pos { color: var(--success); }
+  .neg { color: var(--danger); }
+
+  /* Empty state */
+  .empty-row td {
+    text-align: center; padding: 50px 20px;
+    color: var(--text-light); font-style: italic;
+  }
+
+  /* Yükleme durumu */
+  .loading-block {
+    text-align: center; padding: 40px;
+    color: var(--text-muted); font-size: 13px;
+  }
+</style>
+
+<div x-data="raporlarApp()" x-init="init()">
+
+  <!-- ═══ SEKME BUTONLARI ═══ -->
+  <div class="rapor-tab-container">
+    <button class="rapor-tab-btn" :class="aktifTab === 'yaslandirma' ? 'active' : ''" @click="tabAc('yaslandirma')">Yaşlandırılmış Cari</button>
+    <button class="rapor-tab-btn" :class="aktifTab === 'stok_durum' ? 'active' : ''" @click="tabAc('stok_durum')">Depo Envanter Dağılımı</button>
+    <button class="rapor-tab-btn" :class="aktifTab === 'satis_perf' ? 'active' : ''" @click="tabAc('satis_perf')">Satış & Müşteri Analizi</button>
+    <button class="rapor-tab-btn" :class="aktifTab === 'maliyet_analiz' ? 'active' : ''" @click="tabAc('maliyet_analiz')">Proje Maliyet Analizi</button>
+  </div>
+
+  <!-- ═══ 1. YAŞLANDIRILMIŞ CARI ═══ -->
+  <template x-if="aktifTab === 'yaslandirma'">
+  <div><!-- YASLANDIRMA BÖLÜMÜ -->
+    <div class="satis-filter-bar">
+      <div class="filter-item">
+        <label>Mali Vade Baz Tarihi</label>
+        <input type="date" x-model="filtre.tarih" @change="yukle()">
+      </div>
+      <div class="filter-item">
+        <label>Hesap Tipi</label>
+        <select x-model="filtre.cari_tip" @change="yukle()">
+          <option value="">Tüm Cari Kartlar</option>
+          <option value="Musteri">Sadece Alıcılar</option>
+          <option value="Tedarikci">Tedarikçi / Fabrika</option>
+        </select>
+      </div>
+      <div class="filter-item">
+        <button class="btn btn-primary" @click="yukle()">Raporu Yenile</button>
+      </div>
+    </div>
+
+    <!-- Yaşlandırma özet kartları -->
+    <div class="yas-cards-layout">
+      <div class="yas-grup-kart" style="border-top:3px solid var(--text-light);">
+        <div class="lbl">Vadesi Gelmemiş</div>
+        <div class="val" x-text="fmtTRY(rapor.toplam_gruplar?.vadesiz?.net || 0)"></div>
+      </div>
+      <div class="yas-grup-kart" style="border-top:3px solid var(--success);">
+        <div class="lbl">0-30 Gün Gecikme</div>
+        <div class="val" style="color:var(--success)" x-text="fmtTRY(rapor.toplam_gruplar?.g_0_30?.net || 0)"></div>
+      </div>
+      <div class="yas-grup-kart" style="border-top:3px solid var(--warn);">
+        <div class="lbl">31-60 Gün Gecikme</div>
+        <div class="val" style="color:var(--warn)" x-text="fmtTRY(rapor.toplam_gruplar?.g_31_60?.net || 0)"></div>
+      </div>
+      <div class="yas-grup-kart" style="border-top:3px solid var(--danger);">
+        <div class="lbl">90+ Kritik Eşik</div>
+        <div class="val" style="color:var(--danger)" x-text="fmtTRY(rapor.toplam_gruplar?.g_90_plus?.net || 0)"></div>
+      </div>
+    </div>
+
+    <div class="report-table-box">
+      <div class="report-table-scroll">
+        <table class="tbl-yas">
+          <thead>
+            <tr>
+              <th>Cari Firma Unvanı</th>
+              <th>Ülke</th>
+              <th>Hesap Türü</th>
+              <th class="sayi">Net Bakiye (TRY)</th>
+              <th class="sayi">Vadesiz</th>
+              <th class="sayi">0-30g</th>
+              <th class="sayi">31-60g</th>
+              <th class="sayi">90+g</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="c in (rapor.cariler || [])" :key="c.cari_id">
+              <tr>
+                <td style="font-weight:700; color:var(--primary)" x-text="c.unvan"></td>
+                <td x-text="c.ulke || '—'"></td>
+                <td x-text="c.cari_tip"></td>
+                <td class="sayi" :class="(c.net_bakiye_try || 0) >= 0 ? 'pos' : 'neg'" x-text="fmtTRY(c.net_bakiye_try)"></td>
+                <td class="sayi" x-text="fmtTRY(c.vadesiz_try)"></td>
+                <td class="sayi" x-text="fmtTRY(c.g_0_30_try)"></td>
+                <td class="sayi" x-text="fmtTRY(c.g_31_60_try)"></td>
+                <td class="sayi" x-text="fmtTRY(c.g_90_plus_try)"></td>
+              </tr>
+            </template>
+            <tr x-show="!(rapor.cariler || []).length" class="empty-row">
+              <td colspan="8">Bu tarih için cari yaşlandırma verisi bulunmuyor.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  </template>
+
+  <!-- ═══ 2. DEPO ENVANTER DAĞILIMI ═══ -->
+  <template x-if="aktifTab === 'stok_durum'">
+  <div><!-- STOK DURUM BÖLÜMÜ -->
+    <div class="report-table-box">
+      <div class="report-table-scroll">
+        <table class="tbl-yas">
+          <thead>
+            <tr>
+              <th>Materyal Grubu / Cins</th>
+              <th class="sayi">Kasa / Blok Sayısı</th>
+              <th class="sayi">Toplam Hacim / Metraj</th>
+              <th class="sayi">USD Envanter Değeri</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="c in (stokRapor.cins_listesi || [])" :key="c.cins">
+              <tr>
+                <td style="font-weight:700;" x-text="c.cins"></td>
+                <td class="sayi" x-text="c.toplam_adet"></td>
+                <td class="sayi" x-text="fmtMiktar(c.toplam_miktar) + ' ' + (c.birim || '')"></td>
+                <td class="sayi pos" x-text="fmtUSD(c.deger_usd)"></td>
+              </tr>
+            </template>
+            <tr x-show="!(stokRapor.cins_listesi || []).length && !yukleniyor" class="empty-row">
+              <td colspan="4">Stok envanter verisi bulunmuyor.</td>
+            </tr>
+            <tr x-show="yukleniyor && aktifTab === 'stok_durum'" class="empty-row">
+              <td colspan="4">Yükleniyor...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  </template>
+
+  <!-- ═══ 3. SATIŞ PERFORMANS ═══ -->
+  <template x-if="aktifTab === 'satis_perf'">
+  <div><!-- SATIS PERF BÖLÜMÜ -->
+    <div class="report-table-box">
+      <div class="report-table-scroll">
+        <table class="tbl-yas">
+          <thead>
+            <tr>
+              <th>Analiz Segmenti (Müşteri)</th>
+              <th class="sayi">Fatura Kayıt Adedi</th>
+              <th class="sayi">Brüt Ciro (USD)</th>
+              <th class="sayi">Kâr Tutarı (USD)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="m in (perfRapor.musteri_listesi || [])" :key="m.musteri">
+              <tr>
+                <td style="font-weight:700" x-text="m.musteri"></td>
+                <td class="sayi" x-text="m.adet"></td>
+                <td class="sayi" x-text="fmtUSD(m.satis_usd)"></td>
+                <td class="sayi" :class="(m.kar_usd || 0) >= 0 ? 'pos' : 'neg'" x-text="fmtUSD(m.kar_usd)"></td>
+              </tr>
+            </template>
+            <tr x-show="!(perfRapor.musteri_listesi || []).length && !yukleniyor" class="empty-row">
+              <td colspan="4">Satış performans verisi bulunmuyor.</td>
+            </tr>
+            <tr x-show="yukleniyor && aktifTab === 'satis_perf'" class="empty-row">
+              <td colspan="4">Yükleniyor...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  </template>
+
+  <!-- ═══ 4. MALİYET ANALİZ ═══ -->
+  <template x-if="aktifTab === 'maliyet_analiz'">
+  <div><!-- MALIYET BÖLÜMÜ -->
+    <div class="report-table-box">
+      <div class="report-table-scroll">
+        <table class="tbl-yas">
+          <thead>
+            <tr>
+              <th>Proje / Sipariş No</th>
+              <th>Müşteri</th>
+              <th class="sayi">Fatura Ciro</th>
+              <th class="sayi">Ek Gider / Maliyet</th>
+              <th class="sayi">Net Proje Karı</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="s in (maliyetRapor.siparisler || [])" :key="s.siparis_id">
+              <tr>
+                <td style="font-family:monospace; font-weight:700; color:var(--primary);" x-text="s.siparis_id"></td>
+                <td x-text="s.musteri"></td>
+                <td class="sayi" x-text="fmtUSD(s.satis_usd)"></td>
+                <td class="sayi neg" x-text="fmtUSD(s.maliyet_usd)"></td>
+                <td class="sayi" :class="(s.kar_usd || 0) >= 0 ? 'pos' : 'neg'" x-text="fmtUSD(s.kar_usd)"></td>
+              </tr>
+            </template>
+            <tr x-show="!(maliyetRapor.siparisler || []).length && !yukleniyor" class="empty-row">
+              <td colspan="5">Proje maliyet verisi bulunmuyor.</td>
+            </tr>
+            <tr x-show="yukleniyor && aktifTab === 'maliyet_analiz'" class="empty-row">
+              <td colspan="5">Yükleniyor...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  </template>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function raporlarApp() {
+  return {
+    aktifTab: 'yaslandirma',
+    yukleniyor: false,
+    filtre: { tarih: new Date().toISOString().slice(0, 10), cari_tip: '' },
+    rapor: {},
+    stokRapor: {},
+    perfRapor: {},
+    maliyetRapor: {},
+
+    async init() { await this.yukle(); },
+
+    async tabAc(tab) {
+      this.aktifTab = tab;
+      if (tab === 'yaslandirma') await this.yukle();
+      else if (tab === 'stok_durum') await this.stokDurumYukle();
+      else if (tab === 'satis_perf') await this.satisPerfYukle();
+      else if (tab === 'maliyet_analiz') await this.maliyetAnalizYukle();
+    },
+
+    async yukle() {
+      this.yukleniyor = true;
+      try {
+        const p = new URLSearchParams();
+        if (this.filtre.tarih) p.set('tarih', this.filtre.tarih);
+        if (this.filtre.cari_tip) p.set('cari_tip', this.filtre.cari_tip);
+        this.rapor = await fetch('/api/rapor/yaslandirilmis_cari?' + p).then(r => r.json());
+      } catch(e) {
+        Utils.error('Yaşlandırma raporu yüklenemedi: ' + e.message);
+        this.rapor = {};
+      } finally {
+        this.yukleniyor = false;
+      }
+    },
+
+    async stokDurumYukle() {
+      this.yukleniyor = true;
+      try {
+        this.stokRapor = await fetch('/api/rapor/stok_durum').then(r => r.json());
+      } catch(e) {
+        Utils.error('Stok raporu yüklenemedi: ' + e.message);
+        this.stokRapor = {};
+      } finally {
+        this.yukleniyor = false;
+      }
+    },
+
+    async satisPerfYukle() {
+      this.yukleniyor = true;
+      try {
+        this.perfRapor = await fetch('/api/rapor/satis_performans').then(r => r.json());
+      } catch(e) {
+        Utils.error('Satış performans raporu yüklenemedi: ' + e.message);
+        this.perfRapor = {};
+      } finally {
+        this.yukleniyor = false;
+      }
+    },
+
+    async maliyetAnalizYukle() {
+      this.yukleniyor = true;
+      try {
+        this.maliyetRapor = await fetch('/api/rapor/maliyet_analiz').then(r => r.json());
+      } catch(e) {
+        Utils.error('Maliyet analiz raporu yüklenemedi: ' + e.message);
+        this.maliyetRapor = {};
+      } finally {
+        this.yukleniyor = false;
+      }
+    },
+
+    fmtTRY(v) {
+      const n = parseFloat(v) || 0;
+      if (n === 0) return '—';
+      return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
+    },
+    fmtUSD(v) {
+      const n = parseFloat(v) || 0;
+      if (n === 0) return '—';
+      return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' $';
+    },
+    fmtMiktar(v) {
+      const n = parseFloat(v) || 0;
+      return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+    }
+  };
+}
+</script>
+{% endblock %}

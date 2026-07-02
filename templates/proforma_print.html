@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ (p.musteri or "")|upper }} - {{ p.id or "" }} - PI</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"IBM Plex Sans",Arial,sans-serif;font-size:10px;color:#1a1a1a;background:#fff}
+@page{size:A4 portrait;margin:10mm 12mm}
+@media print{
+  body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .no-print{display:none}
+}
+.print-btn{position:fixed;top:16px;right:16px;background:#1A1F1B;color:#fff;border:none;
+  padding:10px 22px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;
+  box-shadow:0 2px 8px rgba(0,0,0,.2);z-index:999}
+.page{max-width:850px;margin:0 auto;padding:20px}
+
+/* BAŞLIK */
+.header{display:flex;justify-content:space-between;align-items:flex-start;
+  margin-bottom:10px;border-bottom:2px solid #1A1F1B;padding-bottom:8px}
+.logo-name{font-size:13px;font-weight:700;color:#1A1F1B;letter-spacing:.5px}
+.logo-sub{font-size:8px;color:#666;margin-top:1px}
+.company-detail{font-size:8px;color:#555;margin-top:2px;line-height:1.4}
+.inv-meta{text-align:right}
+.inv-title{font-size:16px;font-weight:700;color:#1A1F1B;letter-spacing:2px}
+.inv-row{font-size:10px;margin-top:2px;color:#333}
+.inv-row b{color:#1a1a1a}
+
+/* ALICI */
+.consignee{margin-bottom:10px}
+.consignee-label{font-size:8px;font-weight:700;color:#1A1F1B;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.consignee-name{font-size:12px;font-weight:700}
+.consignee-addr{font-size:9px;color:#444;line-height:1.4}
+
+/* TABLO */
+table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:9px}
+thead tr{background:#1A1F1B;color:#fff}
+thead th{padding:5px 4px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.2px;white-space:nowrap;text-align:center}
+thead th.r{text-align:right}
+tbody tr{border-bottom:1px solid #e0e0e0}
+tbody tr:nth-child(even){background:#FAF7F2}
+tbody td{padding:5px 4px;font-size:9px;vertical-align:middle}
+tbody td.r{text-align:right}
+tbody td.c{text-align:center}
+.product-name{font-weight:600;font-size:9px}
+
+/* TOTALLER */
+.totals-wrap{display:flex;justify-content:flex-end;margin-bottom:12px}
+.totals-box{width:280px}
+.tot-row{display:flex;justify-content:space-between;padding:3px 8px;font-size:9px;border-bottom:1px solid #eee}
+.tot-final{background:#1A1F1B;color:#fff;padding:6px 8px;border-radius:4px;display:flex;justify-content:space-between;margin-top:3px}
+.tot-final span:first-child{font-size:9px;font-weight:700;letter-spacing:.5px}
+.tot-final span:last-child{font-size:13px;font-weight:700}
+
+/* INVOICE IN WORDS */
+.inv-words{text-align:center;font-size:9px;font-weight:700;border:1px solid #ccc;
+  padding:6px;margin-bottom:10px;background:#f9f9f9}
+
+/* BANKA & KOŞULLAR */
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px}
+.section-title{font-size:8px;font-weight:700;color:#1A1F1B;text-transform:uppercase;
+  letter-spacing:.5px;border-bottom:1.5px solid #1A1F1B;padding-bottom:2px;margin-bottom:6px}
+.info-row{display:flex;gap:4px;margin-bottom:3px;font-size:9px}
+.info-label{font-weight:700;color:#444;min-width:70px;flex-shrink:0}
+.info-val{color:#1a1a1a}
+
+/* İMZA */
+.signature-wrap{display:grid;grid-template-columns:1fr 1fr;gap:30px;
+  padding-top:10px;border-top:1px solid #ddd;margin-bottom:10px}
+.sig-box{text-align:center}
+.sig-line{border-top:1px solid #999;padding-top:3px;font-size:9px;color:#555}
+.sig-label{font-size:8px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+
+/* FOOTER */
+.footer{text-align:center;font-size:8px;color:#aaa;border-top:1px solid #eee;padding-top:6px}
+
+/* TOPLAM SATIRI */
+.toplam-satir{background:transparent;font-weight:700;border-top:2px solid #1A1F1B}
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="document.title=document.title;window.print()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Yazdır / PDF Kaydet</button>
+
+<div class="page">
+
+  <!-- BAŞLIK -->
+  <div class="header">
+    <div class="logo-area">
+      <div class="logo-name">MİLESTONE MERMER</div>
+      <div class="logo-sub">SAN. VE TİC. LTD. ŞTİ.</div>
+      {% if p.satici_adres %}
+      <div class="company-detail">{{ p.satici_adres }}</div>
+      {% endif %}
+      {% if p.satici_tel %}<div class="company-detail">Tel: {{ p.satici_tel }}</div>{% endif %}
+      {% if p.satici_email %}<div class="company-detail">{{ p.satici_email }}</div>{% endif %}
+    </div>
+    <div class="inv-meta">
+      <div class="inv-title">{{ _ceviri('belge.proforma_invoice', dil) }}</div>
+      <div class="inv-row" style="margin-top:6px"><b>{{ _ceviri('belge.date_label', dil) }}</b> {{ p.olusturma.strftime('%d.%m.%Y') if p.olusturma else '' }}</div>
+      <div class="inv-row"><b>{{ _ceviri('belge.pi_no', dil) }}</b> {{ p.id }}</div>
+      {% if p.siparis_id %}<div class="inv-row"><b>REF:</b> {{ p.siparis_id }}</div>{% endif %}
+    </div>
+  </div>
+
+  <!-- ALICI -->
+  <div class="consignee">
+    <div class="consignee-label">{{ _ceviri('belge.consignee', dil) }}</div>
+    <div class="consignee-name">{{ p.musteri }}</div>
+    {% if p.musteri_adres %}
+    <div class="consignee-addr">{{ p.musteri_adres }}</div>
+    {% endif %}
+  </div>
+
+  <!-- PI TABLOSU: A,B,C,D,E,F,G,H,I,J,K,L -->
+  {% if kalemler and kalemler|length > 0 %}
+  {% set tip = kalemler[0].urun_tip or 'PLAKA' %}
+  {% set birim = kalemler[0].birim or 'm2' %}
+  <table>
+    <thead>
+      <tr>
+        <th style="width:22px;white-space:nowrap">{{ _ceviri('belge.cont_no', dil) }}<br>{{ _ceviri('belge.no', dil) }}</th>
+        <th>{% if tip == 'EBATLI' %}{{ _ceviri('belge.crate_no', dil) }}<br>{{ _ceviri('belge.no', dil) }}{% else %}{{ _ceviri('belge.block_no', dil) }}<br>{{ _ceviri('belge.no', dil) }}{% endif %}</th>
+        <th>{{ _ceviri('belge.description_of_goods', dil) }}</th>
+        <th>{{ _ceviri('belge.surface', dil) }}<br>{{ _ceviri('belge.spec', dil) }}</th>
+        <th class="r" style="width:42px">{{ _ceviri('belge.length', dil) }}<br>(cm)</th>
+        <th class="r" style="width:42px">{{ _ceviri('belge.height', dil) }}<br>(cm)</th>
+        <th style="width:38px">{{ _ceviri('belge.thk', dil) }}<br>(cm)</th>
+        <th>{{ _ceviri('belge.pcs', dil) }}</th>
+        <th class="r">{% if birim == 'Sqft' %}{{ _ceviri('belge.sqft', dil) }}{% else %}{{ _ceviri('belge.sqm', dil) }}{% endif %}</th>
+        <th class="r">{{ _ceviri('belge.unit', dil) }}<br>{{ _ceviri('belge.price', dil) }}</th>
+        <th class="r" style="width:50px">{{ _ceviri('belge.disc', dil) }}</th>
+        <th class="r">{{ _ceviri('belge.amount', dil) }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% set ns = namespace(sira=0, toplam_m=0, toplam_usd=0, toplam_net=0, toplam_brut=0, toplam_adet=0) %}
+      {% for k in kalemler %}
+      {% set ns.sira = ns.sira + 1 %}
+      {% set ns.toplam_m = ns.toplam_m + (k.miktar or 0) %}
+      {% set ns.toplam_usd = ns.toplam_usd + (k.toplam_fiyat or 0) %}
+      {% set ns.toplam_brut = ns.toplam_brut + (k.toplam_fiyat or 0) %}
+      {% set ns.toplam_net = ns.toplam_net + (k.net_fiyat or k.toplam_fiyat or 0) %}
+      {% set ns.toplam_adet = ns.toplam_adet + ((k.adet or 0) * (k.kasa_ici_adet or 1)) %}
+      <tr>
+        <td class="c">{% if ns.sira == 1 %}1{% endif %}</td>
+        <td class="c">{% if k.urun_tip == 'EBATLI' %}{{ k.kasa_no or k.referans_kodu or k.blok_no or '' }}{% else %}{{ k.blok_no or '' }}{% endif %}</td>
+        <td><div class="product-name">{{ k.cins|upper if k.cins else (k.aciklama|upper if k.aciklama else '') }}</div></td>
+        <td class="c">{{ _deger_cevir('yuzey', (k.yuzey_spec or k.ozellik or ''), dil) }}</td>
+        <td class="r">{{ k.boy|int if k.boy else '' }}</td>
+        <td class="r">{{ k.yukseklik|int if k.yukseklik else '' }}</td>
+        <td class="r">{{ k.kalinlik if k.kalinlik else '' }}</td>
+        <td class="r">{{ (k.adet or 1) * (k.kasa_ici_adet or 1) }}</td>
+        <td class="r">{{ '%.3f'|format(k.miktar or 0) }}</td>
+        <td class="r">{{ '%.2f'|format(k.birim_fiyat or 0) }} {{ k.doviz or 'USD' }}</td>
+        <td class="r" style="font-size:9px;color:#c0392b">
+          {%- if k.iskonto and k.iskonto > 0 -%}
+            -{{ '{:,.2f}'.format((k.toplam_fiyat or 0) - (k.net_fiyat or k.toplam_fiyat or 0)) }}
+          {%- else -%}—{%- endif -%}
+        </td>
+        <td class="r">
+          {%- if k.iskonto and k.iskonto > 0 -%}
+            <span style="text-decoration:line-through;color:#aaa;font-size:7px">{{ '{:,.2f}'.format(k.toplam_fiyat or 0) }}</span><br>
+            <b>{{ '{:,.2f}'.format(k.net_fiyat or k.toplam_fiyat or 0) }}</b>
+          {%- else -%}
+            {{ '{:,.2f}'.format(k.toplam_fiyat or 0) }}
+          {%- endif -%}
+        </td>
+      </tr>
+      {% endfor %}
+      <!-- TOPLAM SATIRI -->
+      <tr class="toplam-satir">
+        <td colspan="7" style="text-align:right;color:#1A1F1B">{{ _ceviri('belge.totally', dil) }}</td>
+        <td class="r">{{ ns.toplam_adet }}</td>
+        <td class="r">{{ '%.3f'|format(ns.toplam_m) }}</td>
+        <td class="r"></td>
+        <td class="r"></td>
+        <td class="r">{{ '{:,.2f}'.format(ns.toplam_net or ns.toplam_usd or 0) }}</td>
+      </tr>
+    </tbody>
+  </table>
+  {% endif %}
+
+  <!-- TOTALLER -->
+  <div class="totals-wrap">
+    <div class="totals-box">
+
+      {% if ns.toplam_brut > ns.toplam_net %}
+      <div class="tot-row"><span>{{ _ceviri('belge.subtotal_gross', dil) }}</span><span>{{ '{:,.2f}'.format(ns.toplam_brut) }}</span></div>
+      <div class="tot-row" style="color:#c0392b"><span>{{ _ceviri('belge.item_discounts', dil) }}</span><span>- {{ '{:,.2f}'.format(ns.toplam_brut - ns.toplam_net) }}</span></div>
+      {% endif %}
+
+      {% set genel_isk = p.iskonto or 0 %}
+      {% if genel_isk > 0 %}
+      <div class="tot-row"><span>{{ _ceviri('belge.subtotal', dil) }}</span><span>{{ '{:,.2f}'.format(ns.toplam_net) }}</span></div>
+      {% if p.iskonto_tip == 'SAB' %}
+      <div class="tot-row" style="color:#c0392b"><span>{{ _ceviri('belge.discount_fixed', dil) }}</span><span>- {{ '{:,.2f}'.format(p.iskonto_sabit or 0) }}</span></div>
+      {% else %}
+      <div class="tot-row" style="color:#c0392b"><span>{{ _ceviri('belge.discount', dil) }} ({{ "%.1f"|format(genel_isk) }}%)</span><span>- {{ '{:,.2f}'.format(ns.toplam_net * genel_isk / 100) }}</span></div>
+      {% endif %}
+      {% endif %}
+
+      {% if p.kdv_oran and p.kdv_oran > 0 and p.tur == 'yurt_ici' %}
+      {% set net_kdv_oncesi = (p.toplam or 0) / (1 + p.kdv_oran/100) %}
+      <div class="tot-row"><span>{{ _ceviri('belge.subtotal_ex_vat', dil) }}</span><span>{{ '{:,.2f}'.format(net_kdv_oncesi) }}</span></div>
+      <div class="tot-row" style="color:#232824"><span>VAT ({{ "%.0f"|format(p.kdv_oran) }}%)</span><span>+ {{ '{:,.2f}'.format((p.toplam or 0) - net_kdv_oncesi) }}</span></div>
+      {% endif %}
+
+      <div class="tot-final">
+        <span>{{ _ceviri('belge.total_label', dil) }} {{ p.doviz or 'USD' }}</span>
+        <span>{{ '{:,.2f}'.format(p.toplam or 0) }}</span>
+      </div>
+
+      {% set avans = p.avans_tutari or 0 %}
+      {% if avans > 0 %}
+      <div class="tot-row" style="margin-top:4px;color:#232824;font-weight:600">
+        {% if p.avans_tip == 'SAB' %}<span>{{ _ceviri('belge.advance_fixed', dil) }}</span>{% else %}<span>ADVANCE ({{ "%.0f"|format(p.avans_yuzdesi or 0) }}%)</span>{% endif %}
+        <span>{{ '{:,.2f}'.format(avans) }}</span>
+      </div>
+      <div class="tot-row" style="font-weight:600"><span>{{ _ceviri('belge.balance_due', dil) }}</span><span>{{ '{:,.2f}'.format((p.toplam or 0) - avans) }}</span></div>
+      {% endif %}
+
+    </div>
+  </div>
+
+  <!-- INVOICE IN WORDS -->
+  {% if toplam_yazili %}
+  <div class="inv-words">{{ toplam_yazili }}</div>
+  {% endif %}
+
+  <!-- BANKA & KOŞULLAR -->
+  <div class="bottom-grid">
+    <div>
+      <div class="section-title">{{ _ceviri('belge.bank_details', dil) }}</div>
+      {% if p.banka_adi %}<div class="info-row"><span class="info-label">{{ _ceviri('belge.bank', dil) }}:</span><span class="info-val">{{ p.banka_adi }}</span></div>{% endif %}
+      {% if p.iban %}<div class="info-row"><span class="info-label">IBAN:</span><span class="info-val">{{ p.iban }}</span></div>{% endif %}
+      {% if p.swift %}<div class="info-row"><span class="info-label">SWIFT:</span><span class="info-val">{{ p.swift }}</span></div>{% endif %}
+    </div>
+    <div>
+      <div class="section-title">{{ _ceviri('belge.terms_conditions', dil) }}</div>
+      {% if p.odeme_sekli %}<div class="info-row"><span class="info-label">{{ _ceviri('belge.payment', dil) }}:</span><span class="info-val">{{ _odeme_cevir(p.odeme_sekli, dil) }}</span></div>{% endif %}
+      {% if p.teslim_sekli %}<div class="info-row"><span class="info-label">{{ _ceviri('belge.incoterms', dil) }}:</span><span class="info-val">{{ p.teslim_sekli }}</span></div>{% endif %}
+      {% if p.termin %}<div class="info-row"><span class="info-label">{{ _ceviri('belge.delivery', dil) }}:</span><span class="info-val">{{ p.termin.strftime('%d.%m.%Y') if p.termin else '' }}</span></div>{% endif %}
+      {% if p.yuklenme_limani %}<div class="info-row"><span class="info-label">{{ _ceviri('belge.load_port', dil) }}:</span><span class="info-val">{{ p.yuklenme_limani }}</span></div>{% endif %}
+      {% if p.varis_limani %}<div class="info-row"><span class="info-label">{{ _ceviri('belge.discharge', dil) }}:</span><span class="info-val">{{ p.varis_limani }}</span></div>{% endif %}
+      {% if p.ozel_sartlar %}<div class="info-row"><span class="info-label">{{ _ceviri('belge.special', dil) }}:</span><span class="info-val">{{ _aciklama_cevir(p.ozel_sartlar, dil) }}</span></div>{% endif %}
+    </div>
+  </div>
+
+  <!-- İMZA -->
+  <div class="signature-wrap">
+    <div class="sig-box">
+      <div class="sig-line">MİLESTONE MERMER</div>
+      <div class="sig-label">{{ _ceviri('belge.authorized_signature', dil) }}</div>
+    </div>
+    <div class="sig-box">
+      <div class="sig-line">{{ p.musteri }}</div>
+      <div class="sig-label">{{ _ceviri('belge.customer_approval', dil) }}</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    This is a computer-generated Proforma Invoice. | MİLESTONE MERMER SAN. VE TİC. LTD. ŞTİ.
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Milestone ERP — Giriş</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+  /* ════════════════════════════════════════════════════
+     MILESTONE ERP GİRİŞ — ORGANIC & EARTHY (v2)
+     Stone Grey · Terracotta · Sage
+     ════════════════════════════════════════════════════ */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --primary: #2B3038;
+    --primary-light: #3C424B;
+    --accent: #DE8A4C;
+    --accent-light: #FCEFE2;
+    --bg-body: #F8F8F6;
+    --bg-surface: #FFFFFF;
+    --border-soft: #EFEFEA;
+    --border-mid: #E2E2DC;
+    --text-main: #454A52;
+    --text-muted: #7C828B;
+    --text-light: #AEB3BA;
+    --success: #3FA38C;
+    --success-bg: #E4F3EE;
+    --danger: #D9756A;
+    --danger-bg: #F7EAE7;
+    --info: #5B8DBF;
+    --info-bg: #E9F1F8;
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 18px;
+  }
+
+  body {
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    background: var(--bg-body);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    color: var(--text-main);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, .logo-title, .modal-title { font-family: 'Outfit', sans-serif; letter-spacing: -0.01em; }
+
+  .login-container {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  .login-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 44px 40px 32px;
+    box-shadow: 0 12px 40px rgba(43, 48, 44, 0.08);
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Üst aksent çizgisi */
+  .login-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+  }
+
+  /* Logo bölümü */
+  .logo {
+    text-align: center;
+    margin-bottom: 34px;
+  }
+  .logo-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 54px; height: 54px;
+    border-radius: var(--radius-md);
+    background: var(--primary);
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .logo-mark svg { width: 28px; height: 28px; }
+  .logo-title {
+    font-size: 21px;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+  }
+  .logo-title span { color: var(--accent); }
+  .logo-sub {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text-light);
+    margin-top: 7px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* Form */
+  .form-group { margin-bottom: 18px; }
+  label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .input-wrap { position: relative; }
+  .input-wrap .icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-light);
+    pointer-events: none;
+    display: inline-flex;
+  }
+  .input-wrap .icon svg { width: 17px; height: 17px; }
+  input[type="text"], input[type="password"] {
+    width: 100%;
+    padding: 13px 16px 13px 44px;
+    border: 1px solid var(--border-mid);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text-main);
+    background: var(--bg-surface);
+    outline: none;
+    transition: all 0.2s ease;
+  }
+  input[type="text"]:focus, input[type="password"]:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(43, 48, 44, 0.06);
+  }
+  input::placeholder { color: var(--text-light); font-weight: 400; }
+
+  /* Şifre göster butonu */
+  .pwd-toggle {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 4px;
+    transition: color 0.15s;
+    display: inline-flex;
+  }
+  .pwd-toggle svg { width: 18px; height: 18px; }
+  .pwd-toggle:hover { color: var(--primary); }
+
+  /* Hatırla checkbox */
+  .form-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    font-size: 12px;
+  }
+  .hatirla {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .hatirla input {
+    width: 14px; height: 14px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .sifre-link {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.15s;
+  }
+  .sifre-link:hover { color: var(--primary); text-decoration: underline; }
+
+  /* Buton */
+  .btn-giris {
+    width: 100%;
+    padding: 14px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    font-family: 'Outfit', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    letter-spacing: 0.3px;
+  }
+  .btn-giris svg { width: 17px; height: 17px; }
+  .btn-giris:hover { background: var(--primary-light); }
+  .btn-giris:active { transform: translateY(1px); }
+  .btn-giris:disabled { background: var(--text-light); cursor: not-allowed; }
+
+  /* Mesaj kutuları */
+  .msg {
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    border: 1px solid;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .msg svg { width: 17px; height: 17px; flex-shrink: 0; }
+  .msg-error { background: var(--danger-bg); color: var(--danger); border-color: #E2C9C5; }
+  .msg-success { background: var(--success-bg); color: var(--success); border-color: #CBD6CC; }
+  .msg-info { background: var(--info-bg); color: var(--info); border-color: #C4D2E6; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-soft);
+    font-size: 12px;
+    color: var(--text-light);
+  }
+  .footer-brand { color: var(--text-muted); font-weight: 600; }
+
+  /* Sıfırlama Modal */
+  .modal-bg {
+    position: fixed;
+    inset: 0;
+    background: rgba(35, 40, 36, 0.5);
+    backdrop-filter: blur(3px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 20px;
+  }
+  .modal-bg.hidden { display: none; }
+  .modal-box {
+    background: var(--bg-surface);
+    border-radius: var(--radius-md);
+    padding: 32px 28px 24px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.18);
+  }
+  .modal-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .modal-title svg { width: 18px; height: 18px; color: var(--accent); }
+  .modal-aciklama {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-bottom: 18px;
+  }
+  .modal-info-kutu {
+    background: var(--bg-body);
+    border: 1px solid var(--border-mid);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    font-size: 12px;
+    color: var(--text-main);
+    line-height: 1.7;
+  }
+  .modal-info-kutu a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .modal-info-row { display: flex; align-items: center; gap: 8px; }
+  .modal-info-row svg { width: 14px; height: 14px; color: var(--text-muted); flex-shrink: 0; }
+  .modal-ipucu {
+    font-size: 12px; color: var(--text-light);
+    margin-bottom: 18px; line-height: 1.5;
+    display: flex; gap: 8px;
+  }
+  .modal-ipucu svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 1px; }
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  .btn-outline {
+    padding: 10px 18px;
+    background: transparent;
+    color: var(--text-main);
+    border: 1px solid var(--border-mid);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .btn-outline:hover { background: var(--bg-body); border-color: var(--primary); }
+  .btn-primary {
+    padding: 10px 18px;
+    background: var(--primary);
+    color: white;
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .btn-primary svg { width: 15px; height: 15px; }
+  .btn-primary:hover { background: var(--primary-light); }
+</style>
+</head>
+<body>
+
+<div class="login-container">
+  <div class="login-card">
+
+    <!-- Logo / Marka -->
+    <div class="logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+      </div>
+      <div class="logo-title">MİLESTONE <span>ERP</span></div>
+      <div class="logo-sub">Enterprise Management System</div>
+    </div>
+
+    <!-- Flash Mesajları (hata, uyarı vs.) -->
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in msgs %}
+        <div class="msg msg-{{ 'error' if cat in ['error', 'danger'] else ('success' if cat == 'success' else 'info') }}">
+          {% if cat in ['error', 'danger'] %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          {% elif cat == 'success' %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          {% else %}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          {% endif %}
+          <span>{{ msg }}</span>
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- Giriş Formu -->
+    <form method="POST" id="girisForm">
+      <div class="form-group">
+        <label for="kullanici">Kullanıcı Adı</label>
+        <div class="input-wrap">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+          <input type="text" id="kullanici" name="kullanici"
+                 autofocus autocomplete="username"
+                 placeholder="Kullanıcı adınızı girin"
+                 required>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="sifre">Şifre</label>
+        <div class="input-wrap">
+          <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+          <input type="password" id="sifre" name="sifre"
+                 autocomplete="current-password"
+                 placeholder="••••••••"
+                 required>
+          <button type="button" class="pwd-toggle" onclick="sifreGoster()" title="Şifreyi göster/gizle" tabindex="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+        </div>
+      </div>
+
+      <div class="form-meta">
+        <label class="hatirla">
+          <input type="checkbox" name="hatirla">
+          Beni Hatırla
+        </label>
+        <a href="#" class="sifre-link" onclick="sifreModalAc(); return false;">Şifremi Unuttum?</a>
+      </div>
+
+      <button type="submit" class="btn-giris" id="btnGiris">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        <span>Sisteme Giriş Yap</span>
+      </button>
+    </form>
+
+    <div class="footer">
+      <div class="footer-brand">Milestone Mermer © 2026</div>
+      <div style="margin-top: 4px; font-size: 11px;">Denizli, Türkiye</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ŞİFRE SIFIRLAMA MODAL -->
+<div class="modal-bg hidden" id="sifreModal" onclick="if(event.target===this) sifreModalKapat();">
+  <div class="modal-box">
+    <div class="modal-title">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+      Şifre Sıfırlama
+    </div>
+    <div class="modal-aciklama">
+      Şifrenizi unuttuysanız sistem yöneticisi ile iletişime geçmeniz gerekmektedir.
+      Güvenlik nedeniyle şifre otomatik olarak sıfırlanamaz.
+    </div>
+    <div class="modal-info-kutu">
+      <strong>Sistem Yöneticisi:</strong>
+      <div class="modal-info-row" style="margin-top:8px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg>
+        <a href="mailto:info@trmilestone.com?subject=Şifre%20Sıfırlama%20Talebi">info@trmilestone.com</a>
+      </div>
+      <div class="modal-info-row" style="margin-top:6px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        <span>+90 (532) 679 0045 — WhatsApp numarası</span>
+      </div>
+    </div>
+    <div class="modal-ipucu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+      <span>İpucu: Yöneticiniz Ayarlar → Kullanıcı ve Yetkiler bölümünden hesabınızı düzenleyerek size yeni bir şifre atayabilir.</span>
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-outline" onclick="sifreModalKapat()">Kapat</button>
+      <a href="mailto:info@trmilestone.com?subject=Şifre%20Sıfırlama%20Talebi&body=Merhaba,%0A%0AŞifremi%20unuttum.%20Hesabımı%20kullanmaya%20devam%20edebilmek%20için%20yeni%20bir%20şifre%20atanmasını%20rica%20ediyorum.%0A%0AKullanıcı%20adı:%20[BURAYA%20YAZIN]%0A%0Aİyi%20çalışmalar."
+         class="btn-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/></svg> Yöneticiye E-Posta</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Şifreyi göster/gizle
+  function sifreGoster() {
+    const inp = document.getElementById('sifre');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  }
+
+  // Modal kontrolleri
+  function sifreModalAc() {
+    document.getElementById('sifreModal').classList.remove('hidden');
+  }
+  function sifreModalKapat() {
+    document.getElementById('sifreModal').classList.add('hidden');
+  }
+
+  // ESC ile modal kapat
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') sifreModalKapat();
+  });
+
+  // Form submit'te buton state
+  document.getElementById('girisForm').addEventListener('submit', function() {
+    const btn = document.getElementById('btnGiris');
+    btn.disabled = true;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg><span>Doğrulanıyor...</span>';
+    // 5 saniye sonra geri açar (network hatasında kullanıcı bekleyip kalmaz)
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg><span>Sisteme Giriş Yap</span>';
+    }, 5000);
+  });
+</script>
+
+</body>
+</html>

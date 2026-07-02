@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ (p.musteri or "")|upper }} - {{ p.id or "" }} - CI</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"IBM Plex Sans",Arial,sans-serif;font-size:10px;color:#1a1a1a;background:#fff}
+@page{size:A4 portrait;margin:10mm 12mm}
+@media print{
+  body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .no-print{display:none}
+}
+.print-btn{position:fixed;top:16px;right:16px;background:#232824;color:#fff;border:none;
+  padding:10px 22px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;
+  box-shadow:0 2px 8px rgba(0,0,0,.2);z-index:999}
+.page{max-width:850px;margin:0 auto;padding:20px}
+
+.header{display:flex;justify-content:space-between;align-items:flex-start;
+  margin-bottom:10px;border-bottom:2px solid #C05A36;padding-bottom:8px}
+.logo-name{font-size:13px;font-weight:700;color:#232824;letter-spacing:.5px}
+.logo-sub{font-size:8px;color:#666;margin-top:1px}
+.company-detail{font-size:8px;color:#555;margin-top:2px;line-height:1.4}
+.inv-meta{text-align:right}
+.inv-title{font-size:16px;font-weight:700;color:#232824;letter-spacing:2px}
+.inv-row{font-size:10px;margin-top:2px;color:#333}
+.inv-row b{color:#1a1a1a}
+
+.consignee{margin-bottom:10px}
+.consignee-label{font-size:8px;font-weight:700;color:#232824;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.consignee-name{font-size:12px;font-weight:700}
+.consignee-addr{font-size:9px;color:#444;line-height:1.4}
+
+table{width:100%;border-collapse:collapse;margin-bottom:10px;font-size:9px}
+thead tr{background:#232824;color:#fff}
+thead th{padding:5px 4px;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.2px;white-space:nowrap;text-align:center}
+thead th.r{text-align:right}
+tbody tr{border-bottom:1px solid #e0e0e0}
+tbody tr:nth-child(even){background:#FAF7F2}
+tbody td{padding:5px 4px;font-size:9px;vertical-align:middle}
+tbody td.r{text-align:right}
+tbody td.c{text-align:center}
+.product-name{font-weight:600;font-size:9px}
+
+.totals-wrap{display:flex;justify-content:flex-end;margin-bottom:12px}
+.totals-box{width:280px}
+.tot-row{display:flex;justify-content:space-between;padding:3px 8px;font-size:9px;border-bottom:1px solid #eee}
+.tot-final{background:#232824;color:#fff;padding:6px 8px;border-radius:4px;display:flex;justify-content:space-between;margin-top:3px}
+.tot-final span:first-child{font-size:9px;font-weight:700;letter-spacing:.5px}
+.tot-final span:last-child{font-size:13px;font-weight:700}
+
+.inv-words{text-align:center;font-size:9px;font-weight:700;border:1px solid #ccc;
+  padding:6px;margin-bottom:10px;background:#f9f9f9}
+
+.bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px}
+.section-title{font-size:8px;font-weight:700;color:#232824;text-transform:uppercase;
+  letter-spacing:.5px;border-bottom:1.5px solid #232824;padding-bottom:2px;margin-bottom:6px}
+.info-row{display:flex;gap:4px;margin-bottom:3px;font-size:9px}
+.info-label{font-weight:700;color:#444;min-width:75px;flex-shrink:0}
+.info-val{color:#1a1a1a}
+
+.signature-wrap{display:grid;grid-template-columns:1fr 1fr;gap:30px;
+  padding-top:10px;border-top:1px solid #ddd;margin-bottom:10px}
+.sig-box{text-align:center}
+.sig-line{border-top:1px solid #999;padding-top:3px;font-size:9px;color:#555}
+.sig-label{font-size:8px;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+
+.footer{text-align:center;font-size:8px;color:#aaa;border-top:1px solid #eee;padding-top:6px}
+.toplam-satir{background:transparent;font-weight:700;border-top:2px solid #232824}
+.decl{font-size:8px;color:#555;border:1px solid #ddd;padding:6px;margin-bottom:10px;line-height:1.5}
+</style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Yazdır / PDF Kaydet</button>
+
+<div class="page">
+
+  <div class="header">
+    <div class="logo-area">
+      <div class="logo-name">MİLESTONE MERMER</div>
+      <div class="logo-sub">SAN. VE TİC. LTD. ŞTİ.</div>
+      {% if p.satici_adres %}<div class="company-detail">{{ p.satici_adres }}</div>{% endif %}
+      {% if p.satici_tel %}<div class="company-detail">Tel: {{ p.satici_tel }}</div>{% endif %}
+      {% if p.satici_email %}<div class="company-detail">{{ p.satici_email }}</div>{% endif %}
+    </div>
+    <div class="inv-meta">
+      <div class="inv-title">{{ _ceviri('belge.commercial_invoice', dil) }}</div>
+      <div class="inv-row" style="margin-top:6px"><b>{{ _ceviri('belge.date_label', dil) }}</b> {{ p.olusturma.strftime('%d.%m.%Y') if p.olusturma else '' }}</div>
+      <div class="inv-row"><b>{{ _ceviri('belge.ci_no', dil) }}</b> {{ p.id }}-CI</div>
+      {% if p.siparis_id %}<div class="inv-row"><b>{{ _ceviri('belge.order_ref', dil) }}</b> {{ p.siparis_id }}</div>{% endif %}
+    </div>
+  </div>
+
+  <div class="consignee">
+    <div class="consignee-label">Consignee / Buyer</div>
+    <div class="consignee-name">{{ p.musteri }}</div>
+    {% if p.musteri_adres %}<div class="consignee-addr">{{ p.musteri_adres }}</div>{% endif %}
+    {% if p.musteri_ulke %}<div class="consignee-addr">{{ p.musteri_ulke }}</div>{% endif %}
+  </div>
+
+  {% if kalemler and kalemler|length > 0 %}
+  {% set birim = kalemler[0].birim or 'm2' %}
+  <table>
+    <thead>
+      <tr>
+        <th style="width:22px">{{ _ceviri('belge.cont_no', dil) }}<br>{{ _ceviri('belge.no', dil) }}</th>
+        <th>{% if tip == 'EBATLI' %}{{ _ceviri('belge.crate_no', dil) }}<br>{{ _ceviri('belge.no', dil) }}{% else %}{{ _ceviri('belge.block_no', dil) }}<br>{{ _ceviri('belge.no', dil) }}{% endif %}</th>
+        {% if tip != 'EBATLI' %}<th>{{ _ceviri('belge.bundle', dil) }}<br>NO</th>{% endif %}
+        <th>{{ _ceviri('belge.description_of_goods', dil) }}</th>
+        <th>{{ _ceviri('belge.surface', dil) }}<br>{{ _ceviri('belge.spec', dil) }}</th>
+        <th class="r" style="width:42px">{{ _ceviri('belge.length', dil) }}<br>(cm)</th>
+        <th class="r" style="width:42px">{{ _ceviri('belge.height', dil) }}<br>(cm)</th>
+        <th style="width:38px">{{ _ceviri('belge.thk', dil) }}<br>(cm)</th>
+        <th>{{ _ceviri('belge.pcs', dil) }}</th>
+        <th class="r">{% if birim == 'sqft' or birim == 'Sqft' %}SQFT{% else %}SQM (M²){% endif %}</th>
+        <th class="r">{{ _ceviri('belge.unit', dil) }}<br>{{ _ceviri('belge.price', dil) }}</th>
+        <th class="r" style="width:50px">{{ _ceviri('belge.disc', dil) }}</th>
+        <th class="r">{{ _ceviri('belge.amount', dil) }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% set ns = namespace(sira=0, toplam_m=0, toplam_usd=0, toplam_adet=0) %}
+      {% for k in kalemler %}
+      {% set ns.sira = ns.sira + 1 %}
+      {% set ns.toplam_m = ns.toplam_m + (k.miktar or 0) %}
+      {% set ns.toplam_usd = ns.toplam_usd + (k.net_fiyat or k.toplam_fiyat or 0) %}
+      {% set ns.toplam_adet = ns.toplam_adet + ((k.adet or 0) * (k.kasa_ici_adet or 1)) %}
+      <tr>
+        <td class="c">{% if ns.sira == 1 %}1{% endif %}</td>
+        <td class="c">{% if k.urun_tip == 'EBATLI' %}{{ k.kasa_no or k.referans_kodu or k.blok_no or '' }}{% else %}{{ k.blok_no or '' }}{% endif %}</td>
+        {% if k.urun_tip != 'EBATLI' %}<td class="c">{{ k.bundle_no or '' }}</td>{% endif %}
+        <td><div class="product-name">{{ k.cins|upper if k.cins else (k.aciklama|upper if k.aciklama else '') }}</div></td>
+        <td class="c">{{ _deger_cevir('yuzey', (k.yuzey_spec or k.ozellik or ''), dil) }}</td>
+        <td class="r">{{ k.boy|int if k.boy else '' }}</td>
+        <td class="r">{{ k.yukseklik|int if k.yukseklik else '' }}</td>
+        <td class="r">{{ k.kalinlik if k.kalinlik else '' }}</td>
+        <td class="r">{{ (k.adet or 1) * (k.kasa_ici_adet or 1) }}</td>
+        <td class="r">{{ '%.3f'|format(k.miktar or 0) }}</td>
+        <td class="r">{{ '%.2f'|format(k.birim_fiyat or 0) }} {{ k.doviz or 'USD' }}</td>
+        <td class="r" style="font-size:9px;color:#c0392b">
+          {%- if k.iskonto and k.iskonto > 0 -%}
+            -{{ '{:,.2f}'.format((k.toplam_fiyat or 0) - (k.net_fiyat or k.toplam_fiyat or 0)) }}
+          {%- else -%}—{%- endif -%}
+        </td>
+        <td class="r">
+          {%- if k.iskonto and k.iskonto > 0 -%}
+            <span style="text-decoration:line-through;color:#aaa;font-size:7px">{{ '{:,.2f}'.format(k.toplam_fiyat or 0) }}</span><br>
+            <b>{{ '{:,.2f}'.format(k.net_fiyat or k.toplam_fiyat or 0) }}</b>
+          {%- else -%}
+            {{ '{:,.2f}'.format(k.net_fiyat or k.toplam_fiyat or 0) }}
+          {%- endif -%}
+        </td>
+      </tr>
+      {% endfor %}
+      <tr class="toplam-satir">
+        <td colspan="8" style="text-align:right;color:#232824">{{ _ceviri('belge.totally', dil) }}</td>
+        <td class="r">{{ ns.toplam_adet }}</td>
+        <td class="r">{{ '%.3f'|format(ns.toplam_m) }}</td>
+        <td class="r"></td>
+        <td class="r">{{ '{:,.2f}'.format(ns.toplam_usd or 0) }}</td>
+      </tr>
+    </tbody>
+  </table>
+  {% endif %}
+
+  <div class="totals-wrap">
+    <div class="totals-box">
+      {% if p.kdv_oran and p.kdv_oran > 0 and p.tur == 'yurt_ici' %}
+      {% set net_kdv_oncesi = (p.toplam or 0) / (1 + p.kdv_oran/100) %}
+      <div class="tot-row"><span>{{ _ceviri('belge.subtotal_ex_vat', dil) }}</span><span>{{ '{:,.2f}'.format(net_kdv_oncesi) }}</span></div>
+      <div class="tot-row" style="color:#232824"><span>VAT ({{ "%.0f"|format(p.kdv_oran) }}%)</span><span>+ {{ '{:,.2f}'.format((p.toplam or 0) - net_kdv_oncesi) }}</span></div>
+      {% endif %}
+      <div class="tot-final">
+        <span>{{ _ceviri('belge.total_label', dil) }} {{ p.doviz or 'USD' }}</span>
+        <span>{{ '{:,.2f}'.format(p.toplam or 0) }}</span>
+      </div>
+    </div>
+  </div>
+
+  {% if toplam_yazili %}
+  <div class="inv-words">{{ toplam_yazili }}</div>
+  {% endif %}
+
+  <!-- TİCARİ FATURA BEYANI -->
+  <div class="decl">
+    <b>{{ _ceviri('belge.declaration', dil) }}</b> We hereby certify that this invoice is true and correct, and that the
+    goods are of Turkish origin. The goods described above are intended for export.
+    {% if p.hs_kodu %}<br><b>H.S. CODE:</b> {{ p.hs_kodu }}{% endif %}
+    <br><b>{{ _ceviri('belge.country_origin', dil) }}</b> TURKEY
+  </div>
+
+  <div class="bottom-grid">
+    <div>
+      <div class="section-title">{{ _ceviri('belge.bank_details', dil) }}</div>
+      {% if p.banka_adi %}<div class="info-row"><span class="info-label">{{ _ceviri('belge.bank', dil) }}:</span><span class="info-val">{{ p.banka_adi }}</span></div>{% endif %}
+      {% if p.iban %}<div class="info-row"><span class="info-label">IBAN:</span><span class="info-val">{{ p.iban }}</span></div>{% endif %}
+      {% if p.swift %}<div class="info-row"><span class="info-label">SWIFT:</span><span class="info-val">{{ p.swift }}</span></div>{% endif %}
+    </div>
+    <div>
+      <div class="section-title">{{ _ceviri('belge.shipment_terms', dil) }}</div>
+      {% if p.odeme_sekli %}<div class="info-row"><span class="info-label">{{ _ceviri('belge.payment', dil) }}:</span><span class="info-val">{{ _odeme_cevir(p.odeme_sekli, dil) }}</span></div>{% endif %}
+      {% if p.teslim_sekli %}<div class="info-row"><span class="info-label">{{ _ceviri('belge.incoterms', dil) }}:</span><span class="info-val">{{ p.teslim_sekli }}</span></div>{% endif %}
+      {% if p.konteyner_no %}<div class="info-row"><span class="info-label">{{ _ceviri('belge.container', dil) }}</span><span class="info-val">{{ p.konteyner_no }}</span></div>{% endif %}
+      {% if p.yuklenme_limani %}<div class="info-row"><span class="info-label">{{ _ceviri('belge.load_port', dil) }}:</span><span class="info-val">{{ p.yuklenme_limani }}</span></div>{% endif %}
+      {% if p.varis_limani %}<div class="info-row"><span class="info-label">{{ _ceviri('belge.discharge', dil) }}:</span><span class="info-val">{{ p.varis_limani }}</span></div>{% endif %}
+    </div>
+  </div>
+
+  <div class="signature-wrap">
+    <div class="sig-box">
+      <div class="sig-line">MİLESTONE MERMER</div>
+      <div class="sig-label">Authorized Signature &amp; Stamp</div>
+    </div>
+    <div class="sig-box">
+      <div class="sig-line">{{ p.musteri }}</div>
+      <div class="sig-label">{{ _ceviri('belge.buyer_acceptance', dil) }}</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    This is a computer-generated Commercial Invoice. | MİLESTONE MERMER SAN. VE TİC. LTD. ŞTİ.
+  </div>
+</div>
+</body>
+</html>

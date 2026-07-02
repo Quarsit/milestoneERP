@@ -1,0 +1,1262 @@
+{% extends "base.html" %}
+{% block title %}Kesim & Üretim{% endblock %}
+{% block header_title %}Fabrika Üretim ve Kesim Paneli{% endblock %}
+{% block content %}
+<style>
+  /* ════════════════════════════════════════════════════
+     KESİM & ÜRETİM — LIGHT LUXURY TASARIM
+     ════════════════════════════════════════════════════ */
+
+  /* Step kartları */
+  .manufacturing-step-card {
+    background: var(--bg-surface); border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md); padding: 24px;
+    margin-bottom: 24px; box-shadow: var(--shadow-blur);
+    transition: box-shadow 0.3s ease;
+  }
+  .manufacturing-step-card:hover { box-shadow: var(--shadow-hover); }
+  .step-header-text {
+    font-size: 14px; font-weight: 700; color: var(--primary);
+    text-transform: uppercase; margin-bottom: 18px;
+    display: flex; align-items: center; gap: 8px;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border-soft);
+    padding-bottom: 10px;
+  }
+
+  /* Sekme bar */
+  .manufacturing-tab-bar {
+    display: flex; border-bottom: 2px solid var(--border-soft);
+    margin-bottom: 24px; background: var(--bg-surface);
+    padding: 8px 16px 0 16px;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    box-shadow: var(--shadow-blur);
+    flex-wrap: wrap;
+  }
+  .mfg-tab {
+    padding: 12px 24px; background: none; border: none;
+    font-size: 14px; font-weight: 600; color: var(--text-muted);
+    cursor: pointer; border-bottom: 3px solid transparent;
+    transition: all 0.2s; font-family: inherit;
+  }
+  .mfg-tab:hover { color: var(--primary); }
+  .mfg-tab.active {
+    color: var(--primary); border-bottom-color: var(--primary);
+    font-weight: 700;
+  }
+
+  /* Resource kart scroller */
+  .resource-scroller {
+    display: flex; gap: 16px; overflow-x: auto;
+    padding: 4px 4px 16px 4px;
+  }
+  .resource-scroller::-webkit-scrollbar { height: 8px; }
+  .resource-scroller::-webkit-scrollbar-thumb {
+    background: var(--border-mid); border-radius: 4px;
+  }
+  .resource-card {
+    min-width: 240px; background: var(--bg-body);
+    border: 1px solid var(--border-mid);
+    border-radius: var(--radius-sm); padding: 18px;
+    cursor: pointer; transition: all 0.2s;
+    display: flex; flex-direction: column; position: relative;
+  }
+  .resource-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-blur);
+    border-color: var(--primary);
+  }
+  .resource-card.selected {
+    background: rgba(59, 130, 246, 0.05);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 1px var(--primary);
+  }
+
+  /* Hedef ürün satırı */
+  .target-item-row {
+    background: var(--bg-body); border: 1px solid var(--border-mid);
+    border-radius: var(--radius-sm); padding: 18px;
+    margin-bottom: 16px; position: relative;
+  }
+
+  /* Tablo (Arşiv) */
+  .data-table-wrapper {
+    background: var(--bg-surface); border-radius: var(--radius-md);
+    border: 1px solid var(--border-soft); box-shadow: var(--shadow-blur);
+    overflow-x: auto; margin-bottom: 24px;
+  }
+  .crisp-list-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+  .crisp-list-table th {
+    background: var(--bg-body); color: var(--text-muted);
+    padding: 16px 20px; font-weight: 600;
+    border-bottom: 1px solid var(--border-soft);
+    text-transform: uppercase; font-size: 11px;
+    letter-spacing: 0.5px; white-space: nowrap;
+  }
+  .crisp-list-table td {
+    padding: 16px 20px; border-bottom: 1px solid var(--border-soft);
+    color: var(--text-main); vertical-align: middle;
+  }
+  .crisp-list-table tr:hover { background-color: var(--row-hover); }
+
+  .status-pill {
+    padding: 4px 10px; border-radius: 30px;
+    font-size: 11px; font-weight: 700;
+    display: inline-flex; border: 1px solid;
+  }
+
+  /* Form yardımcıları */
+  .input-sm {
+    width: 100%; padding: 8px 12px;
+    border: 1px solid var(--border-mid);
+    border-radius: 6px; font-size: 13px;
+    background: var(--bg-surface);
+    color: var(--text-main); outline: none;
+    transition: border-color 0.2s; font-family: inherit;
+  }
+  .input-sm:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(35, 40, 36, 0.04);
+  }
+  .lbl-sm {
+    font-size: 11px; color: var(--text-muted);
+    font-weight: 700; display: block; margin-bottom: 4px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+
+  /* Özet kutuları */
+  .ozet-kutu {
+    background: var(--info-bg); border: 1px solid #C4D2E6;
+    border-radius: 8px; padding: 14px 18px;
+    flex: 1; min-width: 180px;
+  }
+  .fire-kutu {
+    background: var(--danger-bg); border: 1px solid #E2C9C5;
+    border-radius: 8px; padding: 14px 18px;
+    color: var(--danger);
+  }
+  .bilgi-kutu {
+    background: var(--warn-bg); border: 1px solid #E8DCB0;
+    border-radius: 8px; padding: 12px 16px;
+    font-size: 13px; color: #8A6D1B;
+  }
+
+  /* Butonlar */
+  .btn {
+    padding: 9px 18px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    border: 1px solid transparent; transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .btn-primary:hover { background: var(--primary-light); }
+  .btn-primary:disabled { background: var(--text-light); cursor: not-allowed; }
+  .btn-outline { background: transparent; color: var(--text-main); border-color: var(--border-mid); }
+  .btn-outline:hover { background: var(--row-hover); }
+  .btn-outline.danger { color: var(--danger); border-color: #E2C9C5; }
+  .btn-outline.danger:hover { background: var(--danger-bg); }
+
+  .btn-icon-soft {
+    width: 32px; height: 32px; border-radius: 8px;
+    border: 1px solid var(--border-mid); background: var(--bg-surface);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s ease; font-size: 14px;
+  }
+  .btn-icon-soft:hover { background: var(--border-soft); transform: translateY(-1px); }
+  .btn-icon-soft.danger:hover {
+    background: var(--danger-bg); border-color: #E2C9C5; color: var(--danger);
+  }
+
+  /* Modal */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(35, 40, 36, .55);
+    z-index: 200; display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(3px);
+  }
+  .modal {
+    background: var(--bg-surface); border-radius: var(--radius-md);
+    padding: 24px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  }
+  .modal-title {
+    font-size: 16px; font-weight: 700; margin-bottom: 16px;
+    display: flex; justify-content: space-between; align-items: center;
+    color: var(--text-main); padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+</style>
+
+<div x-data="kesimApp()" x-init="init()">
+
+  <!-- ═══ SEKME ÇUBUĞU ═══ -->
+  <div class="manufacturing-tab-bar">
+    <button class="mfg-tab" :class="aktifTab === 'liste' ? 'active' : ''" @click="aktifTab = 'liste'">Fabrika Kesim Geçmişi / Arşiv</button>
+    <button class="mfg-tab" :class="aktifTab === 'yeni' ? 'active' : ''" @click="aktifTab = 'yeni'; yeniKesimAc()">Yeni Katrak / Tel Kesimi Başlat</button>
+  </div>
+
+  <!-- ════════════════ LİSTE GÖRÜNÜMÜ ════════════════ -->
+  <div x-show="aktifTab === 'liste'">
+    <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+      <button class="btn btn-outline" @click="yukle()">Arşivi Yenile</button>
+    </div>
+    <div class="data-table-wrapper">
+      <table class="crisp-list-table">
+        <thead>
+          <tr>
+            <th>Kesim Evrak Fiş No</th>
+            <th>Zamanı</th>
+            <th>İşlem Yönü</th>
+            <th>Ocak Taş Cinsi</th>
+            <th style="text-align:right">Üretilen Metraj</th>
+            <th style="text-align:right">Yansıtılan Maliyet</th>
+            <th style="text-align:right">Net Zayiat / Fire</th>
+            <th style="text-align:right; padding-right:24px;">Aksiyon</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="k in kesimler" :key="k.id">
+            <tr>
+              <td style="font-family:monospace; font-weight:700; color:var(--primary)" x-text="k.id"></td>
+              <td style="color:var(--text-muted);" x-text="k.kesim_tarihi"></td>
+              <td>
+                <span class="status-pill" style="background:var(--info-bg); color:var(--info); border-color:#C4D2E6;"
+                      x-text="k.kaynak_tip + ' ' + (k.detaylar && k.detaylar[0] ? k.detaylar[0].hedef_tip : 'MAMÜL')"></span>
+              </td>
+              <td style="font-weight:600;" x-text="k.kaynak_cins"></td>
+              <td style="text-align:right; font-family:monospace; font-weight:700"
+                  x-text="fmt2((k.detaylar || []).reduce((s, d) => s + (d.miktar_m2 || 0), 0)) + ' m²'"></td>
+              <td style="text-align:right; font-family:monospace; font-weight:700; color:var(--accent);"
+                  x-text="fmt2(k.kaynak_toplam_maliyet || 0) + ' ' + k.kaynak_doviz"></td>
+              <td style="text-align:right;">
+                <span x-show="k.fire_miktar > 0"
+                      :style="k.fire_orani > 30 ? 'color:var(--danger); font-weight:700' : 'color:#8A6D1B; font-weight:600'"
+                      x-text="fmt2(k.fire_miktar || 0) + ' m² (%' + fmt1(k.fire_orani || 0) + ')'"></span>
+                <span x-show="!k.fire_miktar" style="color:var(--success); font-weight:600; font-size:11px;">%0 Kusursuz</span>
+              </td>
+              <td style="text-align:right; padding-right:24px;">
+                <div style="display:flex; gap:6px; justify-content:flex-end;">
+                  <button class="btn-icon-soft" @click="detayAc(k.id)" title="Maliyet Detayı İncele"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+                  <button class="btn-icon-soft danger" @click="kesimSil(k.id)" title="Fişi İptal Et"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                </div>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="!kesimler.length">
+            <td colspan="8" style="text-align:center; padding:60px 20px; color:var(--text-light);">
+              <div style="margin-bottom:10px; display:flex; justify-content:center;"><svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="var(--text-light)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg></div>
+              Henüz kesim işlemi yapılmadı. "Yeni Kesim Başlat" sekmesinden operasyona başlayın.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════════════════ YENİ KESİM FORMU ════════════════ -->
+  <div x-show="aktifTab === 'yeni'">
+
+    <!-- Step 1: Yön -->
+    <div class="manufacturing-step-card">
+      <div class="step-header-text">1⃣ Fabrika İçi İşlem Rejimi Seçimi</div>
+      <div style="display:flex; gap:12px; flex-wrap:wrap;">
+        <button class="btn" :class="form.kesim_yon === 'BLOK_PLAKA' ? 'btn-primary' : 'btn-outline'" @click="yonSec('BLOK_PLAKA')">Katrak Makinası: BLOK PLAKA KESİMİ</button>
+        <button class="btn" :class="form.kesim_yon === 'BLOK_EBATLI' ? 'btn-primary' : 'btn-outline'" @click="yonSec('BLOK_EBATLI')">Doğrudan Ebatlama: BLOK EBATLI MAMÜL</button>
+        <button class="btn" :class="form.kesim_yon === 'PLAKA_EBATLI' ? 'btn-primary' : 'btn-outline'" @click="yonSec('PLAKA_EBATLI')">Köprü Kesme: PLAKA EBATLI MAMÜL</button>
+      </div>
+      <div class="bilgi-kutu" style="margin-top:16px" x-show="form.kesim_yon">
+        <span x-show="form.kesim_yon === 'BLOK_PLAKA'"><strong>Kaynak: Ham Blok</strong> Hedef: Açık Plaka. Fire hesabı yapılmaz. Blok hacmi m² maliyetlerine bölünerek tamamen tüketilir.</span>
+        <span x-show="form.kesim_yon === 'BLOK_EBATLI'"><strong>Kaynak: Ham Blok</strong> Hedef: Hazır Ebatlı. Fire hesabı yapılmaz. Blok tamamen tüketilir.</span>
+        <span x-show="form.kesim_yon === 'PLAKA_EBATLI'"><strong>Kaynak: Yarı Mamül Plaka (Çoklu seçilebilir)</strong> Hedef: Hazır Ebatlı. Sistemsel otomatik fire hesabı yapılır (Giren m² − Çıkan m²).</span>
+      </div>
+    </div>
+
+    <!-- Step 2: Kaynak seçimi -->
+    <div x-show="form.kesim_yon" class="manufacturing-step-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid var(--border-soft); padding-bottom:10px; flex-wrap:wrap; gap:10px;">
+        <div class="step-header-text" style="margin:0; border:none; padding:0;">
+          2⃣ Kesilecek <span x-text="kaynakTip" style="color:var(--accent); margin:0 4px;"></span> Stoğunu İşaretleyin
+        </div>
+        <div x-show="kaynakTip === 'PLAKA'" style="font-size:12px; color:var(--text-muted);">(Birden fazla plaka seçebilirsiniz)</div>
+        <div x-show="kaynakTip === 'BLOK'" style="font-size:12px; color:var(--text-muted);">(Sadece bir adet ham blok seçiniz)</div>
+      </div>
+
+      <!-- Çoklu Plaka Filtre + Hızlı Aralık -->
+      <div x-show="kaynakTip === 'PLAKA' && plakaBloklari.length > 0"
+           style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; background:var(--bg-body); padding:12px 16px; border-radius:var(--radius-sm); border:1px solid var(--border-mid); margin-bottom:16px;">
+        <div style="display:flex; gap:8px; align-items:center">
+          <span style="font-size:12px; font-weight:600; color:var(--text-main);">Blok No Filtresi:</span>
+          <select x-model="plakaBlokFiltresi" class="input-sm" style="width:auto; padding:6px 10px;">
+            <option value="">— Tüm Depo —</option>
+            <template x-for="bn in plakaBloklari" :key="bn"><option :value="bn" x-text="bn"></option></template>
+          </select>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; border-left:1px solid var(--border-mid); padding-left:16px;">
+          <span style="font-size:12px; font-weight:600; color:var(--primary);">Hızlı Aralık (Slab No):</span>
+          <input type="number" x-model.number="aralikBas" placeholder="İlk" min="1" class="input-sm" style="width:70px; padding:6px;">
+          <span style="color:var(--text-light)">—</span>
+          <input type="number" x-model.number="aralikBit" placeholder="Son" min="1" class="input-sm" style="width:70px; padding:6px;">
+          <button class="btn btn-primary" style="padding:6px 14px; font-size:12px;" @click="aralikSec()" :disabled="!plakaBlokFiltresi">Aralığı Seç</button>
+        </div>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+          <button class="btn btn-outline" style="padding:6px 12px; font-size:12px;" @click="hepsiniSec()" x-show="kaynaklar.length > 0">Görünür Hepsini Seç</button>
+          <button class="btn btn-outline danger" style="padding:6px 12px; font-size:12px;" @click="secimTemizle()" x-show="form.kaynak_ids.length > 0">Seçimleri Sıfırla</button>
+        </div>
+      </div>
+
+      <!-- Anlık Kaynak Özeti -->
+      <div x-show="kaynakTip === 'PLAKA' && form.kaynak_ids.length > 0"
+           style="background:var(--success-bg); border:1px solid #CBD6CC; border-radius:var(--radius-sm); padding:12px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+          <span style="font-size:15px; font-weight:800; color:var(--success);" x-text="form.kaynak_ids.length"></span>
+          <span style="font-size:12px; color:var(--success); font-weight:600;">adet plaka kesime girecek.</span>
+        </div>
+        <div style="display:flex; gap:20px; font-size:13px; color:var(--success); flex-wrap:wrap;">
+          <div>Toplam Giren: <strong style="font-family:monospace; font-size:15px;" x-text="fmt2(seciliPlakaToplamM2) + ' m²'"></strong></div>
+          <div>Taş Maliyeti: <strong style="font-family:monospace; font-size:15px;" x-text="fmt2(seciliPlakaToplamMaliyet) + ' ' + (seciliKaynak.doviz || 'USD')"></strong></div>
+        </div>
+      </div>
+
+      <!-- Resource Cards -->
+      <div class="resource-scroller">
+        <template x-for="k in kaynaklar" :key="k.id">
+          <div class="resource-card" :class="form.kaynak_ids.includes(k.id) ? 'selected' : ''" @click="kaynakSec(k)">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+              <span style="padding:2px 8px; background:var(--bg-surface); border:1px solid var(--border-mid); border-radius:4px; font-size:9px; font-weight:700; color:var(--text-muted); letter-spacing:0.5px" x-text="kaynakTip"></span>
+              <span style="font-family:monospace; font-size:10px; color:var(--text-light);" x-text="k.id"></span>
+            </div>
+            <div style="font-size:15px; font-weight:800; color:var(--primary); margin-bottom:4px; font-family:monospace;" x-text="k.no || 'KODSUZ'"></div>
+            <div style="font-size:12px; font-weight:600; color:var(--text-main); margin-bottom:2px;" x-text="k.cins"></div>
+            <div style="font-size:11px; color:var(--text-muted); margin-bottom:12px;" x-text="k.uretici || 'Menşei Belirsiz'"></div>
+
+            <div style="padding-top:10px; border-top:1px dashed var(--border-soft); display:flex; justify-content:space-between; align-items:flex-end;">
+              <div>
+                <div style="font-size:15px; font-weight:800; color:var(--accent); font-family:monospace;">
+                  <span x-text="fmt2(k.mevcut || 0)"></span> <span style="font-size:11px;" x-text="k.birim"></span>
+                </div>
+                <div x-show="kaynakTip === 'BLOK' && k.tonaj" style="font-size:11px; font-weight:700; color:var(--text-main); margin-top:2px; font-family:monospace;">
+                  <span x-text="fmt2(k.tonaj || 0)"></span> <span style="font-size:10px; color:var(--text-light);">ton</span>
+                </div>
+                <div x-show="k.boy" style="font-size:10px; color:var(--text-light); margin-top:2px;">
+                  Ölçü: <span x-text="(k.boy || 0) + 'x' + (k.yukseklik || 0) + (k.en ? 'x' + k.en : (k.kalinlik ? 'x' + k.kalinlik : ''))"></span>
+                  <span x-show="k.birim === 'm³'" style="color:var(--text-light);">cm</span>
+                </div>
+                <div x-show="k.fatura_no" style="font-size:10px; color:var(--text-light); margin-top:2px;">
+                  Fatura: <span style="font-family:monospace; color:var(--accent);" x-text="k.fatura_no"></span>
+                </div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:10px; color:var(--text-muted);">B.Maliyet</div>
+                <div style="font-size:11px; font-weight:700; font-family:monospace; color:var(--info);"
+                     x-text="fmt2(k.birim_maliyet || 0) + ' ' + k.doviz"></div>
+              </div>
+            </div>
+            <div x-show="kaynakTip === 'PLAKA' && k.slab_no"
+                 style="position:absolute; top:-8px; right:-8px; background:var(--primary); color:white; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; box-shadow:0 2px 6px rgba(0,0,0,0.15);"
+                 x-text="'#' + k.slab_no"></div>
+          </div>
+        </template>
+        <div x-show="!kaynaklar.length"
+             style="padding:40px; text-align:center; color:var(--text-light); width:100%; border:1px dashed var(--border-mid); border-radius:var(--radius-md);">
+          Filtrelenen kriterde uygun Serbest <strong x-text="kaynakTip"></strong> stoku bulunmuyor.
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 3: Hedef tanımlama -->
+    <div x-show="form.kesim_yon && form.kaynak_ids.length > 0" class="manufacturing-step-card">
+      <div class="step-header-text">3⃣ Üretim Bandından Çıkacak Mamül Formları (Hedef)</div>
+      <div style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">
+        Her bir satır yeni bir depo kartı olarak kaydedilecektir. Kasa yapısı oluşturulurken adet sayıları çarpılarak hesaplanır.
+      </div>
+
+      <!-- Üretim Blok No (sadece BLOK kaynaklı kesimlerde) -->
+      <div x-show="kaynakTip === 'BLOK'"
+           style="background:var(--bg-body); border:1px solid var(--border-mid); border-radius:8px; padding:14px 18px; margin-bottom:18px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;"
+           data-testid="uretim-blok-no-bar">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:20px;"></span>
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Üretim Blok No</div>
+            <div style="font-size:10px; color:var(--text-light);">Kesilen bloktan üretilen plakalar bu numara ile stoğa girer</div>
+          </div>
+        </div>
+        <input type="text" x-model="form.uretim_blok_no"
+               placeholder="örn. A-2026-001-U1"
+               style="flex:1; min-width:220px; padding:8px 12px; border:1px solid var(--border-mid); border-radius:6px; font-size:13px; font-family:monospace; font-weight:600;"
+               data-testid="uretim-blok-no-input">
+        <button @click="uretimBlokNoVarsayilan()" type="button"
+                style="padding:6px 12px; background:#fff; border:1px solid var(--border-mid); border-radius:6px; font-size:11px; font-weight:600; color:var(--text-muted); cursor:pointer;"
+                title="Orijinal blok numarasından otomatik öner">
+          Otomatik
+        </button>
+        <span x-show="seciliKaynak.no" style="font-size:11px; color:var(--text-light);">
+          Orijinal: <strong style="color:var(--primary); font-family:monospace;" x-text="seciliKaynak.no || '-'"></strong>
+        </span>
+      </div>
+
+      <!-- GLOBAL Plaka Numaralandırma (sadece PLAKA çıkışlı kesimlerde) -->
+      <div x-show="hedefTip === 'PLAKA'"
+           style="background:var(--info-bg); border:1px solid #C4D2E6; border-radius:8px; padding:14px 18px; margin-bottom:18px; display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:20px;"></span>
+          <div>
+            <div style="font-size:11px; font-weight:700; color:var(--info); text-transform:uppercase;">Plaka Numaralandırma</div>
+            <div style="font-size:10px; color:var(--text-light);">Tüm üretim satırları tek akışla, kesintisiz numaralanır</div>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px; font-weight:600; color:var(--text-muted);">Başlangıç No</label>
+          <input type="number" min="1" x-model.number="form.baslangic_slab"
+                 style="width:90px; padding:7px 10px; border:1px solid #C4D2E6; border-radius:6px; font-size:13px; font-weight:600; display:block;">
+        </div>
+        <div style="flex:1; min-width:160px;">
+          <label style="font-size:11px; font-weight:600; color:var(--text-muted);">Atlanacak No (kırılan)</label>
+          <input type="text" x-model="form.atlanan_slablar" placeholder="örn. 3, 61"
+                 style="width:100%; padding:7px 10px; border:1px solid #C4D2E6; border-radius:6px; font-size:13px; display:block;">
+        </div>
+        <div x-show="form.baslangic_slab && toplamPlakaAdet > 0" style="font-size:11px; color:var(--info); font-weight:600;">
+          <span x-text="'' + plakaAralikGoster()"></span>
+        </div>
+      </div>
+
+      <template x-for="(h, i) in form.hedefler" :key="i">
+        <div class="target-item-row">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--border-mid);">
+            <strong style="font-size:12px; color:var(--primary);">Üretim Satırı #<span x-text="i + 1"></span></strong>
+            <button @click="form.hedefler.splice(i, 1)" style="background:none; border:none; color:var(--danger); cursor:pointer; font-weight:700; font-size:12px;">Satırı Sil</button>
+          </div>
+          <div style="display:grid; grid-template-columns: 1.5fr 1.5fr 1fr 1fr 1fr 1fr 1fr 1.2fr; gap:12px; align-items:end">
+            <div>
+              <label class="lbl-sm">Mermer Cinsi</label>
+              <select class="input-sm" x-model="h.cins">
+                <template x-for="c in cinsListesi" :key="c"><option :value="c" x-text="c"></option></template>
+              </select>
+            </div>
+            <div>
+              <label class="lbl-sm">Yüzey Özelliği</label>
+              <select class="input-sm" x-model="h.ozellik">
+                <option value="">— Ham (Belirtilmedi) —</option>
+                <template x-for="o in ozellikListesi" :key="o"><option :value="o" x-text="o"></option></template>
+              </select>
+            </div>
+            <div>
+              <label class="lbl-sm">En (cm)</label>
+              <input type="number" step="0.1" class="input-sm" x-model.number="h.boy" @input="hedefHesapla(h)">
+            </div>
+            <div>
+              <label class="lbl-sm">Boy (cm)</label>
+              <input type="number" step="0.1" class="input-sm" x-model.number="h.yukseklik" @input="hedefHesapla(h)">
+            </div>
+            <div>
+              <label class="lbl-sm">Kalınlık (cm)</label>
+              <input type="number" step="0.1" class="input-sm" x-model.number="h.kalinlik">
+            </div>
+            <div>
+              <label class="lbl-sm" x-text="h.hedef_tip === 'EBATLI' ? 'Üretilen Toplam Adet' : 'Plaka Adedi'"></label>
+              <input type="number" min="1" class="input-sm" x-model.number="h.adet" @input="hedefHesapla(h)"
+                     :placeholder="h.hedef_tip === 'EBATLI' ? 'Çıkan toplam parça' : ''">
+            </div>
+            <div x-show="h.hedef_tip === 'PLAKA'" style="grid-column:span 2; align-self:center;">
+              <div style="font-size:11px; color:var(--text-muted); font-style:italic;">
+                Plaka numaraları form üstündeki başlangıç no'dan otomatik ve kesintisiz verilir.
+              </div>
+            </div>
+            <div>
+              <label class="lbl-sm">Tekil m²</label>
+              <input type="number" step="0.01" class="input-sm" x-model.number="h.miktar_m2_birim"
+                     style="background:var(--border-soft); color:var(--text-muted);" readonly>
+            </div>
+            <div>
+              <label class="lbl-sm">Toplam Metraj</label>
+              <input type="text" class="input-sm"
+                     :value="fmt2((h.miktar_m2_birim || 0) * (h.adet || 1)) + ' m²'"
+                     readonly
+                     style="font-weight:700; background:var(--success-bg); color:var(--success); border-color:#CBD6CC;">
+            </div>
+          </div>
+
+          <div x-show="h.hedef_tip === 'EBATLI'"
+               style="margin-top:16px; background:var(--bg-surface); padding:12px; border-radius:var(--radius-sm); border:1px solid var(--border-soft); display:grid; grid-template-columns:1fr 1fr 2fr; gap:16px; align-items:center;">
+            <div>
+              <label class="lbl-sm">Kasa İçi Adet <span style="text-transform:none; font-weight:400;">(1 Kasada kaç parça)</span></label>
+              <input type="number" min="1" class="input-sm" x-model.number="h.kasa_ici_adet" placeholder="Örn: 60">
+            </div>
+            <div>
+              <label class="lbl-sm">Kasa Sayısı <span style="text-transform:none; font-weight:400;">(otomatik)</span></label>
+              <div style="font-size:15px; font-weight:800; color:var(--primary); padding-top:6px;"
+                   x-text="(Math.ceil((h.adet || 0) / (h.kasa_ici_adet || 1)) || 0) + ' Kasa'"></div>
+              <div style="font-size:10px; color:var(--text-muted); margin-top:2px;"
+                   x-show="h.adet && h.kasa_ici_adet && (h.adet % h.kasa_ici_adet !== 0)"
+                   x-text="'(son kasada ' + (h.adet % h.kasa_ici_adet) + ' parça)'"></div>
+            </div>
+            <div>
+              <label class="lbl-sm">Sistem Kasa No (Otomatik)</label>
+              <div style="font-size:12px; color:var(--text-muted); padding-top:6px;">
+                Yeni Ebatlı kartları "ML-CLC60602A-1" formatıyla sırayla üretilecektir.
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <div style="display:flex; gap:10px; margin-top:8px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline" @click="hedefEkle()">+ Yeni Çıktı Formu Satırı Ekle</button>
+        <button type="button" class="btn btn-outline" style="border-color:var(--info); color:var(--info);"
+                @click="excelModalAc()">Excel'den Ölçü Listesi Yükle</button>
+      </div>
+
+      <!-- EXCEL IMPORT MODAL -->
+      <div class="modal-bg" x-show="excelModal" x-cloak @click.self="excelModal=false"
+           style="position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; display:flex; align-items:center; justify-content:center;">
+        <div class="modal" style="background:#fff; border-radius:12px; width:560px; max-width:95vw; max-height:90vh; overflow-y:auto; padding:0;">
+          <div style="padding:16px 20px; background:var(--info, var(--info)); color:#fff; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:700;">Excel'den Ölçü Listesi Yükle</span>
+            <span @click="excelModal=false" style="cursor:pointer; font-size:22px;">&times;</span>
+          </div>
+          <div style="padding:20px;">
+            <div style="font-size:13px; color:var(--text-muted); margin-bottom:14px;">
+              Fabrikadan gelen plaka ölçü listesini Excel'den yükleyin. Her satır bir üretim satırı olarak eklenir.
+              <strong>Not:</strong> Yüklenen satırlar mevcut üretim satırlarına <u>eklenir</u>.
+            </div>
+
+            <input type="file" accept=".xlsx,.xls,.csv" @change="excelDosyaSec($event)"
+                   style="width:100%; padding:8px; border:1px dashed var(--border-mid); border-radius:8px;">
+            <div x-show="excelForm.dosyaAd" style="margin-top:8px; font-size:12px; color:var(--success); font-weight:600;"
+                 x-text="'' + excelForm.dosyaAd + ' (' + excelForm.satirlar.length + ' satır)'"></div>
+
+            <!-- Sütun eşleştirme -->
+            <div x-show="excelForm.sutunlar.length > 0" style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <div>
+                <label style="font-size:12px; font-weight:600;">En / Boy Sütunu *</label>
+                <select x-model="excelForm.mapBoy" style="width:100%; padding:7px;">
+                  <option value="">— Seç —</option>
+                  <template x-for="s in excelForm.sutunlar" :key="s"><option :value="s" x-text="s"></option></template>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:12px; font-weight:600;">Yükseklik Sütunu *</label>
+                <select x-model="excelForm.mapYuk" style="width:100%; padding:7px;">
+                  <option value="">— Seç —</option>
+                  <template x-for="s in excelForm.sutunlar" :key="s"><option :value="s" x-text="s"></option></template>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:12px; font-weight:600;">Kalınlık Sütunu</label>
+                <select x-model="excelForm.mapKal" style="width:100%; padding:7px;">
+                  <option value="">— (opsiyonel) —</option>
+                  <template x-for="s in excelForm.sutunlar" :key="s"><option :value="s" x-text="s"></option></template>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:12px; font-weight:600;">Adet Sütunu</label>
+                <select x-model="excelForm.mapAdet" style="width:100%; padding:7px;">
+                  <option value="">— (yoksa 1) —</option>
+                  <template x-for="s in excelForm.sutunlar" :key="s"><option :value="s" x-text="s"></option></template>
+                </select>
+              </div>
+            </div>
+
+            <!-- Ortak alanlar -->
+            <div x-show="excelForm.sutunlar.length > 0" style="margin-top:14px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <div>
+                <label style="font-size:12px; font-weight:600;">Hedef Tipi</label>
+                <select x-model="excelForm.hedefTip" style="width:100%; padding:7px;">
+                  <option value="PLAKA">Plaka</option>
+                  <option value="EBATLI">Ebatlı</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:12px; font-weight:600;">Cins (boşsa kaynaktan)</label>
+                <select x-model="excelForm.cins" style="width:100%; padding:7px;">
+                  <option value="">— Kaynaktan al —</option>
+                  <template x-for="c in cinsListesi" :key="c"><option :value="c" x-text="c"></option></template>
+                </select>
+              </div>
+              <div x-show="excelForm.hedefTip === 'PLAKA'">
+                <label style="font-size:12px; font-weight:600;">Başlangıç Plaka No</label>
+                <input type="number" min="1" x-model.number="excelForm.baslangicSlab" style="width:100%; padding:7px;" placeholder="Örn: 1">
+                <div style="font-size:10px; color:var(--text-light); margin-top:2px;">Tüm satırlara ardışık no verilir</div>
+              </div>
+              <div x-show="excelForm.hedefTip === 'EBATLI'">
+                <label style="font-size:12px; font-weight:600;">Kasa İçi Adet</label>
+                <input type="number" min="1" x-model.number="excelForm.kasaIci" style="width:100%; padding:7px;" placeholder="Örn: 60">
+              </div>
+            </div>
+
+            <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:20px;">
+              <button @click="excelModal=false" class="btn btn-outline">İptal</button>
+              <button @click="excelHedefleriEkle()" class="btn btn-primary" style="background:var(--info, var(--info));"
+                      :disabled="!excelForm.mapBoy || !excelForm.mapYuk">
+                Üretim Satırlarına Ekle
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Özet -->
+      <div x-show="form.hedefler.length > 0"
+           style="margin-top:24px; padding-top:20px; border-top:1px solid var(--border-soft); display:flex; gap:16px; flex-wrap:wrap;">
+        <div class="ozet-kutu">
+          <div class="lbl-sm">Üretilen Toplam Metraj</div>
+          <div style="font-family:monospace; font-weight:800; font-size:20px; color:var(--primary);"
+               x-text="fmt2(hedefToplamM2) + ' m²'"></div>
+        </div>
+        <div class="ozet-kutu">
+          <div class="lbl-sm">İşleme Giren Hammadde Maliyeti</div>
+          <div style="font-family:monospace; font-weight:800; font-size:20px; color:var(--accent);"
+               x-text="fmt2(kaynakToplamMaliyet) + ' ' + (seciliKaynak.doviz || 'USD')"></div>
+        </div>
+        <div class="ozet-kutu" style="background:var(--success-bg); border-color:#CBD6CC;">
+          <div class="lbl-sm" style="color:var(--success)">Hedef Birim Maliyeti</div>
+          <div style="font-family:monospace; font-weight:800; font-size:20px; color:var(--success);"
+               x-text="fmt2(birimMaliyet) + ' ' + (seciliKaynak.doviz || 'USD') + '/m²'"></div>
+        </div>
+        <div x-show="form.kesim_yon === 'PLAKA_EBATLI' && hedefToplamM2 > 0" class="fire-kutu" style="flex:1; min-width:200px;">
+          <div class="lbl-sm" style="color:var(--danger)">Üretim Firesi (Atık)</div>
+          <div style="font-family:monospace; font-weight:800; font-size:20px;" x-text="fireBilgisi"></div>
+        </div>
+      </div>
+
+      <div style="margin-top:24px;">
+        <label class="lbl-sm">Operasyon Açıklaması (Opsiyonel)</label>
+        <input type="text" class="input-sm" x-model="form.aciklama" placeholder="Kesim makinası, vardiya notu veya özel iş emri no...">
+      </div>
+
+      <div style="margin-top:24px; display:flex; gap:12px; justify-content:flex-end; padding-top:20px; border-top:1px solid var(--border-soft);">
+        <button class="btn btn-outline" @click="iptal()">İptal ve Sıfırla</button>
+        <button class="btn btn-primary" @click="kaydet()" style="padding:12px 32px; font-size:14px;"
+                :style="kaydedebilir ? '' : 'opacity:0.55;'">
+          Kesim Fişini Onayla ve Deftere İşle
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ DETAY MODAL ═══ -->
+  <div class="modal-bg" x-show="detayModal" x-cloak @click.self="detayModal=false">
+    <div class="modal" style="width:900px; max-width:96vw; max-height:90vh; display:flex; flex-direction:column;">
+      <div class="modal-title">
+        <span style="font-size:16px; font-weight:700; color:var(--primary);">
+          Kesim Emri Detayı: <span style="font-family:monospace; color:var(--accent);" x-text="secimKesim.id"></span>
+        </span>
+        <button @click="detayModal=false" style="background:none; border:none; font-size:24px; cursor:pointer; color:var(--text-light);">&times;</button>
+      </div>
+
+      <div style="background:var(--bg-body); padding:16px; border-radius:var(--radius-sm); border:1px solid var(--border-mid); margin-bottom:20px; display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; font-size:13px;">
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <span style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">İşlem Zamanı</span>
+          <span style="font-weight:600;" x-text="secimKesim.kesim_tarihi"></span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <span style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Dönüşüm Yönü</span>
+          <span style="font-weight:700; color:var(--info);"
+                x-text="(secimKesim.kaynak_tip || '?') + ' ' + (secimKesim.detaylar && secimKesim.detaylar.length > 0 ? secimKesim.detaylar[0].hedef_tip : '?')"></span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <span style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">İşlenen Taş</span>
+          <span style="font-weight:600;" x-text="secimKesim.kaynak_cins"></span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <span style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Hammadde Maliyeti</span>
+          <span style="font-family:monospace; font-weight:700; color:var(--accent);"
+                x-text="fmt2(secimKesim.kaynak_toplam_maliyet || 0) + ' ' + secimKesim.kaynak_doviz"></span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <span style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Birim Çıktı Maliyeti</span>
+          <span style="font-family:monospace; font-weight:700; color:var(--success);"
+                x-text="fmt2(secimKesim.detaylar && secimKesim.detaylar[0] ? secimKesim.detaylar[0].birim_maliyet : 0) + ' ' + secimKesim.kaynak_doviz + '/m²'"></span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+          <span style="font-size:10px; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Kayıp (Fire) Oranı</span>
+          <span style="font-weight:700;"
+                :style="secimKesim.fire_miktar > 0 ? 'color:var(--danger)' : 'color:var(--success)'"
+                x-text="secimKesim.fire_miktar > 0 ? fmt2(secimKesim.fire_miktar) + ' m² (%' + fmt1(secimKesim.fire_orani || 0) + ')' : '%0 Kayıp'"></span>
+        </div>
+      </div>
+
+      <div style="font-size:14px; font-weight:700; color:var(--primary); margin-bottom:10px;">Depoya Eklenen Yeni Stok Kartları</div>
+      <div style="flex:1; overflow-y:auto; border:1px solid var(--border-soft); border-radius:var(--radius-sm);">
+        <table class="crisp-list-table">
+          <thead style="position:sticky; top:0; z-index:10; background:var(--border-soft);">
+            <tr>
+              <th>Stok ID</th>
+              <th>Ürün Tipi</th>
+              <th>Boyut (cm)</th>
+              <th>Referans / Plaka</th>
+              <th style="text-align:right">Metraj (m²)</th>
+              <th style="text-align:right">Adet</th>
+              <th style="text-align:right">Birim Maliyet</th>
+              <th style="text-align:right; padding-right:20px;">Toplam Değer</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="d in secimKesim.detaylar || []" :key="d.id">
+              <tr>
+                <td style="font-family:monospace; color:var(--info); font-weight:700;" x-text="d.hedef_stok_id"></td>
+                <td>
+                  <span class="status-pill" style="background:var(--warn-bg); color:#8A6D1B; border-color:#E8DCB0;" x-text="d.hedef_tip"></span>
+                </td>
+                <td style="font-size:12px;" x-text="(d.boy || 0) + 'x' + (d.yukseklik || 0) + (d.kalinlik ? 'x' + d.kalinlik : '')"></td>
+                <td style="font-family:monospace; font-size:11px; font-weight:600;" x-text="d.kasa_no || d.slab_no || '—'"></td>
+                <td style="text-align:right; font-family:monospace; font-weight:600;" x-text="fmt2(d.miktar_m2 || 0)"></td>
+                <td style="text-align:right; font-weight:600;" x-text="d.adet"></td>
+                <td style="text-align:right; font-family:monospace;" x-text="fmt2(d.birim_maliyet || 0)"></td>
+                <td style="text-align:right; font-family:monospace; font-weight:700; color:var(--primary); padding-right:20px;" x-text="fmt2(d.toplam_maliyet || 0)"></td>
+              </tr>
+            </template>
+            <tr x-show="!(secimKesim.detaylar || []).length">
+              <td colspan="8" style="text-align:center; padding:30px; color:var(--text-light);">Detay kaydı bulunmuyor.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:16px; text-align:right;">
+        <button class="btn btn-outline" @click="detayModal=false">Paneli Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== Üretim Blok No Modal ====== -->
+  <div x-show="uretimBlokModalAcik" x-cloak class="modal-bg" style="z-index:1000;"
+       @keydown.escape.window="uretimBlokModalAcik=false">
+    <div class="modal" style="max-width:520px;" @click.outside="">
+      <div class="modal-title" style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:24px;"></span>
+        <span>Üretim Blok No Belirle</span>
+      </div>
+      <div style="padding:20px 0; font-size:13px; color:var(--text-muted); line-height:1.6;">
+        Kesilen <strong x-text="seciliKaynak.cins || ''"></strong> bloğundan üretilecek tüm plakalar 
+        <strong>bu yeni blok numarası</strong> altında stoğa girer ve raporlanır.
+        <br><br>
+        <span style="font-size:11px; color:var(--text-light);">Orijinal blok izleme korunur:</span>
+        <ul style="margin:6px 0 0 18px; font-size:11px; color:var(--text-muted);">
+          <li>Yeni plakaların açıklamasında orijinal blok no görünür</li>
+          <li>Kesim kaydı orijinal kaynak_id'yi tutar</li>
+          <li>Maliyet ve karlılık raporları her iki numara üzerinden çekilebilir</li>
+        </ul>
+      </div>
+      <div style="display:flex; gap:12px; align-items:flex-end; margin-bottom:12px;">
+        <div style="flex:1;">
+          <label style="display:block; font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; margin-bottom:6px;">
+            Orijinal Blok No
+          </label>
+          <div style="padding:10px 12px; background:var(--bg-body); border:1px solid var(--border-soft); border-radius:6px; font-family:monospace; font-weight:700; color:var(--text-main);"
+               x-text="seciliKaynak.no || seciliKaynak.id || '-'"></div>
+        </div>
+        <div style="display:flex; align-items:center; padding-bottom:10px; color:var(--accent); font-size:22px;"></div>
+        <div style="flex:1;">
+          <label style="display:block; font-size:11px; font-weight:700; color:var(--accent); text-transform:uppercase; margin-bottom:6px;">
+            Üretim Blok No <span style="color:var(--danger);">*</span>
+          </label>
+          <input type="text" x-model="form.uretim_blok_no"
+                 @keydown.enter.prevent="uretimBlokModalKapat()"
+                 style="width:100%; padding:10px 12px; border:2px solid var(--accent); border-radius:6px; font-family:monospace; font-weight:700; font-size:15px; color:var(--primary);"
+                 placeholder="örn. A-2026-001-U1"
+                 data-testid="uretim-blok-modal-input"
+                 autofocus>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding-top:12px; border-top:1px solid var(--border-soft);">
+        <button @click="uretimBlokNoVarsayilan()" type="button" class="btn btn-outline"
+                style="padding:8px 14px; font-size:12px;">
+          Otomatik Üret
+        </button>
+        <div style="display:flex; gap:8px;">
+          <button @click="uretimBlokModalAcik=false; form.kaynak_ids=[]; seciliKaynak={};" class="btn btn-outline"
+                  style="padding:8px 18px; font-size:13px;">İptal</button>
+          <button @click="uretimBlokModalKapat()" class="btn btn-primary"
+                  style="padding:8px 22px; font-size:13px;"
+                  data-testid="uretim-blok-modal-onay">
+            Onayla ve Devam Et
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script>
+function kesimApp() {
+  return {
+    aktifTab: 'liste',
+    kesimler: [],
+    kaynaklarTumu: [],
+    seciliKaynak: {},
+    plakaBlokFiltresi: '',
+    aralikBas: null,
+    aralikBit: null,
+    detayModal: false,
+    uretimBlokModalAcik: false,
+    secimKesim: {},
+    cinsListesi: [],
+    ozellikListesi: [],
+    form: { kesim_yon: '', kaynak_ids: [], kesim_tarihi: '', aciklama: '', hedefler: [], uretim_blok_no: '', baslangic_slab: 1, atlanan_slablar: '' },
+    excelModal: false,
+    excelForm: { dosyaAd: '', sutunlar: [], satirlar: [], mapBoy: '', mapYuk: '', mapKal: '', mapAdet: '', hedefTip: 'PLAKA', cins: '', kasaIci: 1, baslangicSlab: 1 },
+
+    // ─── Format helper'ları ───
+    fmt2(n) {
+      const v = parseFloat(n) || 0;
+      return v.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    },
+    fmt1(n) {
+      const v = parseFloat(n) || 0;
+      return v.toLocaleString('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    },
+
+    // ─── Computed ───
+    get kaynakTip() {
+      if (!this.form.kesim_yon) return '';
+      return this.form.kesim_yon.startsWith('BLOK_') ? 'BLOK' : 'PLAKA';
+    },
+    get hedefTip() {
+      if (!this.form.kesim_yon) return '';
+      return this.form.kesim_yon.endsWith('_PLAKA') ? 'PLAKA' : 'EBATLI';
+    },
+    get kaynaklar() {
+      let lst = this.kaynaklarTumu;
+      if (this.kaynakTip === 'PLAKA' && this.plakaBlokFiltresi) {
+        lst = lst.filter(k => k.blok_no === this.plakaBlokFiltresi);
+      }
+      return lst;
+    },
+    get plakaBloklari() {
+      const set = new Set();
+      this.kaynaklarTumu.forEach(k => { if (k.blok_no) set.add(k.blok_no); });
+      return Array.from(set).sort();
+    },
+    get seciliPlakaToplamM2() {
+      return this.kaynaklarTumu
+        .filter(k => this.form.kaynak_ids.includes(k.id))
+        .reduce((s, k) => s + (parseFloat(k.mevcut) || 0), 0);
+    },
+    get seciliPlakaToplamMaliyet() {
+      return this.kaynaklarTumu
+        .filter(k => this.form.kaynak_ids.includes(k.id))
+        .reduce((s, k) => {
+          // Önce matrah (kaydedilmiş maliyet), yoksa m² × birim fiyat
+          const matrah = parseFloat(k.matrah) || 0;
+          const tutar = matrah > 0 ? matrah : (parseFloat(k.mevcut) || 0) * (parseFloat(k.birim_maliyet) || 0);
+          return s + tutar;
+        }, 0);
+    },
+    get hedefToplamM2() {
+      return this.form.hedefler.reduce((s, h) => {
+        const tekil = parseFloat(h.miktar_m2_birim) || 0;
+        const adet = parseInt(h.adet) || 1;  // EBATLI'da da PLAKA'da da: toplam parça sayısı
+        return s + tekil * adet;
+      }, 0);
+    },
+    get kaynakToplamMaliyet() {
+      if (this.kaynakTip === 'BLOK') {
+        // Önce matrah (kaydedilmiş toplam alış bedeli) — en doğrusu.
+        const matrah = parseFloat(this.seciliKaynak.matrah) || 0;
+        if (matrah > 0) return matrah;
+        // Matrah yoksa: alış birimine göre (ton ise tonaj×fiyat, m³ ise hacim×fiyat)
+        const fiyat = parseFloat(this.seciliKaynak.birim_maliyet) || 0;
+        const birim = (this.seciliKaynak.alis_fiyat_birim || 'ton').toLowerCase();
+        if (birim === 'ton') {
+          return (parseFloat(this.seciliKaynak.tonaj) || 0) * fiyat;
+        }
+        return (parseFloat(this.seciliKaynak.mevcut) || 0) * fiyat;  // mevcut = hacim m³
+      }
+      return this.seciliPlakaToplamMaliyet;
+    },
+    get kaynakToplamMiktar() {
+      if (this.kaynakTip === 'BLOK') return parseFloat(this.seciliKaynak.mevcut) || 0;
+      return this.seciliPlakaToplamM2;
+    },
+    get birimMaliyet() {
+      const m2 = this.hedefToplamM2;
+      if (!m2) return 0;
+      return this.kaynakToplamMaliyet / m2;
+    },
+    get fireBilgisi() {
+      if (this.form.kesim_yon !== 'PLAKA_EBATLI') return '';
+      const giren = this.kaynakToplamMiktar;
+      const cikan = this.hedefToplamM2;
+      if (!giren) return '';
+      const fire = giren - cikan;
+      const oran = giren > 0 ? (fire / giren * 100) : 0;
+      if (fire < 0) return `⚠️ Hata: Çıkan metraj, gireni aşıyor! (+${this.fmt2(Math.abs(fire))} m²)`;
+      return `${this.fmt2(fire)} m² (%${this.fmt1(oran)} Zayiat)`;
+    },
+    get kaydedebilir() {
+      if (!this.form.kesim_yon || !this.form.kaynak_ids.length || !this.form.hedefler.length) return false;
+      if (this.hedefToplamM2 <= 0) return false;
+      if (this.form.kesim_yon === 'PLAKA_EBATLI' && this.hedefToplamM2 > this.kaynakToplamMiktar + 0.01) return false;
+      // Kaynak stoğun cinsi varsa, boş hedef cinsleri kayıtta otomatik dolacak — engelleme
+      const seciliStoklar = this.kaynaklarTumu.filter(k => this.form.kaynak_ids.includes(k.id));
+      const kaynakCinsVar = seciliStoklar.some(s => s.cins);
+      for (const h of this.form.hedefler) {
+        if (!h.cins && !kaynakCinsVar) return false;  // cins hiçbir yerden gelemiyorsa engelle
+        if (!h.boy || !h.yukseklik || !h.adet) return false;
+      }
+      return true;
+    },
+
+    async init() {
+      await this.yukle();
+      try {
+        const c = await fetch('/api/lookup/cins').then(r => r.json());
+        this.cinsListesi = Array.isArray(c) ? c.map(x => x.deger || x).filter(Boolean) : [];
+        const o = await fetch('/api/lookup/ozellik').then(r => r.json());
+        this.ozellikListesi = Array.isArray(o) ? o.map(x => x.deger || x).filter(Boolean) : [];
+      } catch(e) { console.warn(e); }
+    },
+
+    async yukle() {
+      try {
+        const r = await fetch('/api/kesim').then(r => r.json());
+        if (r.ok) this.kesimler = r.kesimler || [];
+      } catch(e) {
+        Utils.error('Kesim listesi yüklenemedi: ' + e.message);
+      }
+    },
+
+    yeniKesimAc() { this.iptal(); },
+
+    iptal() {
+      this.form = {
+        kesim_yon: '', kaynak_ids: [],
+        kesim_tarihi: new Date().toISOString().slice(0, 10),
+        aciklama: '', hedefler: [], uretim_blok_no: ''
+      };
+      this.seciliKaynak = {};
+      this.kaynaklarTumu = [];
+      this.plakaBlokFiltresi = '';
+      this.aralikBas = null;
+      this.aralikBit = null;
+      this.uretimBlokModalAcik = false;
+    },
+
+    async yonSec(yon) {
+      this.form.kesim_yon = yon;
+      this.form.kaynak_ids = [];
+      this.form.hedefler = [];
+      this.seciliKaynak = {};
+      this.plakaBlokFiltresi = '';
+      await this.kaynakYukle();
+    },
+
+    async kaynakYukle() {
+      try {
+        const tip = this.kaynakTip;
+        const r = await fetch('/api/kesim/kaynak_listesi?tip=' + tip).then(r => r.json());
+        if (r.ok) this.kaynaklarTumu = r.kaynaklar || [];
+      } catch(e) {
+        Utils.error('Kaynak listesi yüklenemedi: ' + e.message);
+      }
+    },
+
+    kaynakSec(k) {
+      if (this.kaynakTip === 'BLOK') {
+        this.form.kaynak_ids = [k.id];
+        this.seciliKaynak = k;
+        // Üretim Blok No varsayılan değerini öner ve modal'ı aç
+        if (!this.form.uretim_blok_no) {
+          this.uretimBlokNoVarsayilan();
+        }
+        this.uretimBlokModalAcik = true;
+      } else {
+        const idx = this.form.kaynak_ids.indexOf(k.id);
+        if (idx >= 0) {
+          this.form.kaynak_ids.splice(idx, 1);
+        } else {
+          this.form.kaynak_ids.push(k.id);
+        }
+        if (this.form.kaynak_ids.length > 0) {
+          this.seciliKaynak = this.kaynaklarTumu.find(x => x.id === this.form.kaynak_ids[0]) || {};
+        } else {
+          this.seciliKaynak = {};
+        }
+      }
+    },
+
+    uretimBlokNoVarsayilan() {
+      const orijinal = this.seciliKaynak.no || this.seciliKaynak.id || '';
+      if (!orijinal) {
+        this.form.uretim_blok_no = '';
+        return;
+      }
+      const yyyy = new Date().getFullYear();
+      // Eğer orijinal numara YIL içermiyorsa, yıl + sıra ekle
+      this.form.uretim_blok_no = `${orijinal}-U${String(yyyy).slice(-2)}1`;
+    },
+
+    uretimBlokModalKapat() {
+      if (!this.form.uretim_blok_no || !this.form.uretim_blok_no.trim()) {
+        Utils.error('Lütfen Üretim Blok No giriniz veya Otomatik tuşuna basınız.');
+        return;
+      }
+      this.uretimBlokModalAcik = false;
+    },
+
+    hepsiniSec() {
+      this.form.kaynak_ids = this.kaynaklar.map(k => k.id);
+      if (this.form.kaynak_ids.length > 0) {
+        this.seciliKaynak = this.kaynaklar[0];
+      }
+    },
+
+    aralikSec() {
+      if (!this.plakaBlokFiltresi) {
+        Utils.warning('Önce bir Blok No filtreleyin.');
+        return;
+      }
+      const bas = parseInt(this.aralikBas);
+      const bit = parseInt(this.aralikBit);
+      if (!bas || !bit || bas > bit) {
+        Utils.warning('Geçerli bir sayısal aralık girin.');
+        return;
+      }
+      const filtreli = this.kaynaklarTumu.filter(k => k.blok_no === this.plakaBlokFiltresi);
+      let secilenler = [];
+      for (let i = bas; i <= bit; i++) {
+        const eslesen = filtreli.find(k => {
+          if (!k.slab_no) return false;
+          const slab = String(k.slab_no);
+          if (slab.includes('/')) return parseInt(slab.split('/')[0]) === i;
+          return parseInt(slab) === i;
+        });
+        if (eslesen && !this.form.kaynak_ids.includes(eslesen.id)) {
+          secilenler.push(eslesen);
+        }
+      }
+      secilenler.forEach(p => { this.form.kaynak_ids.push(p.id); });
+      if (secilenler.length > 0) {
+        this.seciliKaynak = this.kaynaklarTumu.find(x => x.id === this.form.kaynak_ids[0]);
+        Utils.success(secilenler.length + ' plaka eklendi');
+      } else {
+        Utils.warning('Bu aralıkta eklenecek yeni plaka bulunamadı.');
+      }
+      this.aralikBas = null;
+      this.aralikBit = null;
+    },
+
+    secimTemizle() {
+      this.form.kaynak_ids = [];
+      this.seciliKaynak = {};
+    },
+
+    get toplamPlakaAdet() {
+      return this.form.hedefler
+        .filter(h => h.hedef_tip === 'PLAKA')
+        .reduce((s, h) => s + (parseInt(h.adet) || 0), 0);
+    },
+
+    plakaAralikGoster() {
+      const bas = parseInt(this.form.baslangic_slab) || 1;
+      const toplam = this.toplamPlakaAdet;
+      if (toplam <= 0) return '';
+      const atlanan = new Set();
+      if (this.form.atlanan_slablar) {
+        String(this.form.atlanan_slablar).replace(/\s/g, '').split(',').forEach(p => {
+          const n = parseInt(p);
+          if (!isNaN(n)) atlanan.add(n);
+        });
+      }
+      // Son numarayı bul (atlananları es geçerek toplam kadar üret)
+      let uretilen = 0, slab = bas, son = bas;
+      while (uretilen < toplam) {
+        if (!atlanan.has(slab)) { son = slab; uretilen++; }
+        slab++;
+        if (slab > bas + toplam + atlanan.size + 200) break;
+      }
+      let metin = bas + ' - ' + son + ' (' + toplam + ' plaka)';
+      if (atlanan.size > 0) metin += ', ' + [...atlanan].sort((a,b)=>a-b).join(', ') + ' hariç';
+      return metin;
+    },
+
+    excelModalAc() {
+      if (!this.form.kesim_yon || this.form.kaynak_ids.length === 0) {
+        Utils.error('Önce kesim yönü seçip kaynak stok seçin');
+        return;
+      }
+      this.excelForm = {
+        dosyaAd: '', sutunlar: [], satirlar: [],
+        mapBoy: '', mapYuk: '', mapKal: '', mapAdet: '',
+        hedefTip: this.hedefTip || 'PLAKA', cins: '', kasaIci: 1, baslangicSlab: 1
+      };
+      this.excelModal = true;
+    },
+
+    excelDosyaSec(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      this.excelForm.dosyaAd = file.name;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const ws = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        if (!rows || rows.length === 0) return;
+        this.excelForm.sutunlar = rows[0].map(h => String(h).trim());
+        this.excelForm.satirlar = rows.slice(1)
+          .filter(r => r.length > 0 && r.some(c => c !== ''))
+          .map(r => {
+            let rd = [];
+            for (let i = 0; i < this.excelForm.sutunlar.length; i++) rd.push(String(r[i] || '').trim());
+            return rd;
+          });
+      };
+      reader.readAsArrayBuffer(file);
+    },
+
+    excelHedefleriEkle() {
+      const f = this.excelForm;
+      if (!f.mapBoy || !f.mapYuk) { Utils.error('En/Boy ve Yükseklik sütunlarını eşleştirin'); return; }
+      const boyIdx = f.sutunlar.indexOf(f.mapBoy);
+      const yukIdx = f.sutunlar.indexOf(f.mapYuk);
+      const kalIdx = f.mapKal ? f.sutunlar.indexOf(f.mapKal) : -1;
+      const adetIdx = f.mapAdet ? f.sutunlar.indexOf(f.mapAdet) : -1;
+
+      let eklenen = 0;
+      for (let row of f.satirlar) {
+        const boy = parseFloat(row[boyIdx]) || 0;
+        const yuk = parseFloat(row[yukIdx]) || 0;
+        if (boy <= 0 || yuk <= 0) continue;
+        const kal = (kalIdx >= 0 && row[kalIdx]) ? (parseFloat(row[kalIdx]) || 2) : 2;
+        const adet = (adetIdx >= 0 && row[adetIdx]) ? (parseInt(row[adetIdx]) || 1) : 1;
+
+        const yeniHedef = {
+          hedef_tip: f.hedefTip,
+          cins: f.cins || '',
+          ozellik: '',
+          boy: boy, yukseklik: yuk, kalinlik: kal,
+          adet: adet,
+          kasa_ici_adet: f.hedefTip === 'EBATLI' ? (parseInt(f.kasaIci) || 1) : 1,
+          miktar_m2_birim: Math.round((boy * yuk / 10000) * 10000) / 10000
+        };
+        this.form.hedefler.push(yeniHedef);
+        eklenen++;
+      }
+
+      // Excel'deki başlangıç no'yu form geneline aktar (numaralandırma global)
+      if (f.hedefTip === 'PLAKA' && f.baslangicSlab) {
+        this.form.baslangic_slab = parseInt(f.baslangicSlab) || 1;
+      }
+
+      if (eklenen === 0) { Utils.error('Geçerli ölçü satırı bulunamadı'); return; }
+      Utils.success(eklenen + ' üretim satırı eklendi');
+      this.excelModal = false;
+    },
+
+    hedefEkle() {
+      // Cins ve özelliği DOĞRUDAN seçili kaynaktan al (en güvenilir).
+      let kaynak = this.seciliKaynak && this.seciliKaynak.id ? this.seciliKaynak : null;
+      if (!kaynak && this.form.kaynak_ids.length) {
+        kaynak = this.kaynaklarTumu.find(k => k.id === this.form.kaynak_ids[0]) || null;
+      }
+      const cins = kaynak ? (kaynak.cins || '') : '';
+      const ozellik = kaynak ? (kaynak.ozellik || '') : '';
+      const yeniHedef = {
+        hedef_tip: this.hedefTip,
+        cins: cins, ozellik: ozellik,
+        boy: 0, yukseklik: 0, kalinlik: 2,
+        adet: 1, kasa_ici_adet: 1,
+        miktar_m2_birim: 0
+      };
+      this.form.hedefler.push(yeniHedef);
+    },
+
+    hedefHesapla(h) {
+      const boy = parseFloat(h.boy) || 0;
+      const yuk = parseFloat(h.yukseklik) || 0;
+      if (boy > 0 && yuk > 0) {
+        h.miktar_m2_birim = Math.round((boy * yuk / 10000) * 10000) / 10000;
+      }
+    },
+
+    async kaydet() {
+      // Eksik olanı tam olarak belirt (buton kilitli kalıp kullanıcıyı şaşırtmasın)
+      if (!this.form.kesim_yon) { Utils.error('Önce kesim yönünü seçin (BLOK→PLAKA vb.)'); return; }
+      if (!this.form.kaynak_ids.length) { Utils.error('Kesilecek kaynak stok seçin'); return; }
+      if (!this.form.hedefler.length) { Utils.error('En az bir üretim (çıktı) satırı ekleyin'); return; }
+
+      // Boş cinsleri kaynak stoğun cinsinden otomatik doldur (Excel import kolaylığı)
+      const seciliStoklar = this.kaynaklarTumu.filter(k => this.form.kaynak_ids.includes(k.id));
+      const kaynakCins = (seciliStoklar.find(s => s.cins) || {}).cins || '';
+      if (kaynakCins) {
+        this.form.hedefler.forEach(h => { if (!h.cins) h.cins = kaynakCins; });
+      }
+
+      if (this.hedefToplamM2 <= 0) { Utils.error('Üretim satırlarında ölçü/adet eksik — toplam metraj 0'); return; }
+      if (this.form.kesim_yon === 'PLAKA_EBATLI' && this.hedefToplamM2 > this.kaynakToplamMiktar + 0.01) {
+        Utils.error(`Çıkan metraj (${this.fmt2(this.hedefToplamM2)} m²) giren plakadan (${this.fmt2(this.kaynakToplamMiktar)} m²) fazla olamaz. Adet/ölçüyü kontrol edin.`);
+        return;
+      }
+      // Her satırı tek tek kontrol et, hangisinde ne eksik söyle
+      for (let i = 0; i < this.form.hedefler.length; i++) {
+        const h = this.form.hedefler[i];
+        const no = i + 1;
+        if (!h.cins) { Utils.error(`Üretim satırı #${no}: Mermer cinsi seçilmemiş`); return; }
+        if (!h.boy || h.boy <= 0) { Utils.error(`Üretim satırı #${no}: En/Boy ölçüsü girilmemiş`); return; }
+        if (!h.yukseklik || h.yukseklik <= 0) { Utils.error(`Üretim satırı #${no}: Yükseklik ölçüsü girilmemiş`); return; }
+        if (!h.adet || h.adet <= 0) { Utils.error(`Üretim satırı #${no}: Adet girilmemiş`); return; }
+      }
+
+      const toplamParca = this.form.hedefler.reduce((s, h) => s + (parseInt(h.adet) || 0), 0);
+      const onayMsg = `Fabrika üretim iş emri işlenecek:\n\n` +
+        `İşlem: ${this.form.kesim_yon}\n` +
+        `Kaynak Giren: ${this.form.kaynak_ids.length} stok\n` +
+        `Yeni Çıkan: ${toplamParca} parça\n` +
+        `Toplam Metraj: ${this.fmt2(this.hedefToplamM2)} m²\n\n` +
+        `Bu verilerle stok defteri geri dönülemez şekilde güncellenecektir. Onaylıyor musunuz?`;
+      if (!(await Utils.confirm(onayMsg))) return;
+
+      try {
+        const r = await fetch('/api/kesim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.form)
+        }).then(r => r.json());
+        if (r.ok) {
+          Utils.success(r.mesaj || 'Kesim fişi kaydedildi');
+          this.iptal();
+          this.aktifTab = 'liste';
+          await this.yukle();
+        } else {
+          Utils.error(r.mesaj || 'Sunucu hatası');
+        }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async detayAc(kesim_id) {
+      try {
+        const r = await fetch('/api/kesim/' + kesim_id).then(r => r.json());
+        if (r.ok) {
+          this.secimKesim = r.kesim;
+          this.detayModal = true;
+        } else {
+          Utils.error(r.mesaj || 'Detay alınamadı');
+        }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async kesimSil(kesim_id) {
+      const onay = await Utils.confirm(
+        'Bu üretim fişini iptal edip geri almak istediğinize emin misiniz?\n\n' +
+        'Yeni oluşturulan stoklar ambardan silinecek, kullanılan kaynak stoklar tekrar Serbest duruma çekilecektir.'
+      );
+      if (!onay) return;
+
+      try {
+        const r = await fetch('/api/kesim/' + kesim_id, { method: 'DELETE' }).then(r => r.json());
+        if (r.ok) {
+          Utils.success(r.mesaj || 'Kesim fişi iptal edildi');
+          await this.yukle();
+        } else {
+          Utils.error(r.mesaj || 'İptal edilemedi');
+        }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    }
+  };
+}
+</script>
+{% endblock %}

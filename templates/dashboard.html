@@ -1,0 +1,492 @@
+{% extends "base.html" %}
+{% block title %}Ana Sayfa{% endblock %}
+{% block header_title %}Ana Sayfa — Dashboard{% endblock %}
+
+{% block content %}
+<style>
+  /* ════════════════════════════════════════════════════
+     DASHBOARD — LIGHT LUXURY TASARIM
+     ════════════════════════════════════════════════════ */
+
+  /* KPI Grid */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px; margin-bottom: 24px;
+  }
+  .kpi {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 20px 22px;
+    box-shadow: var(--shadow-blur);
+    transition: all 0.2s;
+    position: relative;
+  }
+  .kpi.kpi-link { cursor: pointer; }
+  .kpi.kpi-link:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover, 0 8px 24px rgba(0,0,0,0.08));
+    border-color: var(--primary);
+  }
+  .kpi-label {
+    font-size: 11px; font-weight: 700;
+    color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 8px;
+  }
+  .kpi-val {
+    font-size: 32px; font-weight: 800;
+    color: var(--primary); font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    line-height: 1.1;
+  }
+  .kpi-val.blue  { color: var(--primary); }
+  .kpi-val.amber { color: var(--accent); }
+  .kpi-val.green { color: var(--success); }
+  .kpi-val.red   { color: var(--danger); }
+
+  /* KPI detay (alt satır) */
+  .kpi-detay { margin-top: 12px; font-size: 12px; }
+  .kpi-detay .satir {
+    display: flex; justify-content: space-between;
+    align-items: baseline;
+  }
+  .kpi-detay .satir + .satir { margin-top: 4px; }
+  .kpi-detay .usd { color: var(--accent); font-weight: 700; font-family: monospace; }
+  .kpi-detay .olcu { color: var(--text-main); font-family: monospace; }
+  .kpi-detay .try-deg { color: var(--text-muted); font-family: monospace; font-size: 11px; }
+  .kpi-detay .olcu-alt { color: var(--text-muted); font-size: 11px; }
+
+  /* Bölüm başlığı */
+  .bolum-baslik {
+    font-size: 12.5px; font-weight: 700;
+    color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: 0.8px; margin: 28px 0 14px 2px;
+    display: flex; align-items: center; gap: 9px;
+  }
+  .bolum-baslik:first-child { margin-top: 4px; }
+  .bolum-baslik svg { width: 16px; height: 16px; stroke-width: 1.9; color: var(--accent); flex-shrink: 0; }
+
+  /* İş akışı panosu */
+  .akis-pano {
+    display: flex; align-items: stretch; gap: 8px;
+    margin-bottom: 24px; flex-wrap: wrap;
+  }
+  .akis-kart {
+    flex: 1; min-width: 150px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px; padding: 16px 18px;
+    cursor: pointer; transition: all 0.15s;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .akis-kart:hover {
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transform: translateY(-2px);
+  }
+  .akis-ust { display: flex; align-items: center; justify-content: space-between; }
+  .akis-ikon { width: 34px; height: 34px; border-radius: 9px; background: var(--bg-body); display: inline-flex; align-items: center; justify-content: center; color: var(--text-muted); }
+  .akis-ikon svg { width: 18px; height: 18px; stroke-width: 1.8; }
+  .akis-sayi {
+    font-size: 28px; font-weight: 800; color: var(--text-light);
+    font-family: monospace;
+  }
+  .akis-sayi.dolu { color: var(--accent); }
+  .akis-sayi.dolu-yesil { color: var(--success); }
+  .akis-sayi.dolu-kirmizi { color: var(--danger); }
+  .akis-baslik { font-size: 13px; font-weight: 700; color: var(--text-strong, #232824); margin-top: 4px; }
+  .akis-alt { font-size: 11px; color: var(--text-light); }
+  .akis-ok {
+    display: flex; align-items: center; color: var(--border-mid, #cbd5e1);
+    font-size: 24px; font-weight: 300;
+  }
+  @media (max-width: 760px) {
+    .akis-ok { display: none; }
+    .akis-kart { min-width: 130px; }
+  }
+
+  /* Aktif siparişler akış paneli */
+  .siparis-akis-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px; overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .siparis-akis-tbl { width: 100%; border-collapse: collapse; }
+  .siparis-akis-tbl th {
+    text-align: left; padding: 12px 16px;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--text-muted); font-weight: 700;
+    border-bottom: 1px solid var(--border-soft); background: var(--bg-body);
+  }
+  .siparis-akis-tbl th.r { text-align: right; }
+  .siparis-akis-tbl td { padding: 12px 16px; border-bottom: 1px solid var(--border-soft); }
+  .siparis-akis-tbl td.r { text-align: right; }
+  .siparis-akis-tbl tr:last-child td { border-bottom: none; }
+  .siparis-akis-tbl tbody tr:hover { background: var(--row-hover); }
+  .akis-mini-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 6px 12px; border-radius: 6px;
+    font-size: 12px; font-weight: 600; text-decoration: none;
+    border: 1px solid transparent; white-space: nowrap; transition: all 0.15s;
+  }
+  .akis-mini-btn svg { width: 14px; height: 14px; stroke-width: 1.8; }
+  .akis-mini-btn.mavi { background: var(--accent-light); color: var(--accent); border-color: #E8C9B8; }
+  .akis-mini-btn.mavi:hover { background: var(--accent); color: #fff; }
+  .akis-mini-btn.yesil { background: var(--success-bg); color: var(--success); border-color: #CBD6CC; }
+  .akis-mini-btn.yesil:hover { background: var(--success); color: #fff; }
+  .akis-mini-btn.gri { background: var(--bg-body); color: var(--text-muted); border-color: var(--border-soft); cursor: default; }
+
+  /* İki sütun tablo paneli */
+  .iki-panel {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 20px; margin-bottom: 24px;
+  }
+  @media (max-width: 900px) { .iki-panel { grid-template-columns: 1fr; } }
+
+  .panel-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-blur);
+    overflow: hidden;
+  }
+  .panel-card-header {
+    padding: 14px 20px; background: var(--bg-body);
+    border-bottom: 1px solid var(--border-soft);
+    display: flex; align-items: center; gap: 9px;
+    font-size: 13px; font-weight: 700;
+  }
+  .panel-card-header svg { width: 16px; height: 16px; stroke-width: 1.9; color: var(--accent); flex-shrink: 0; }
+  .panel-card-header .alt-info {
+    font-size: 11px; font-weight: 500;
+    color: var(--text-light); margin-left: auto;
+  }
+  .panel-card-body { max-height: 320px; overflow-y: auto; }
+
+  /* Mini tablolar */
+  .mini-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .mini-tbl th {
+    background: var(--bg-body); color: var(--text-muted);
+    padding: 10px 14px; font-weight: 600;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.5px; text-align: left;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .mini-tbl td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text-main); vertical-align: middle;
+  }
+  .mini-tbl tr:hover td { background: var(--row-hover); }
+  .mini-tbl tr.tiklanabilir { cursor: pointer; }
+  .mini-tbl tr.tiklanabilir:hover td { background: var(--row-hover); }
+  .mini-tbl .r { text-align: right; font-family: monospace; }
+
+  /* Badge & rozet */
+  .badge {
+    padding: 3px 9px; border-radius: 30px;
+    font-size: 11px; font-weight: 700;
+    display: inline-block;
+  }
+  .badge-aktif { background: var(--info-bg); color: var(--info); }
+  .badge-yesil { background: var(--success-bg); color: var(--success); }
+  .badge-sari  { background: var(--warn-bg); color: #8A6D1B; }
+  .badge-kirmizi { background: var(--danger-bg); color: var(--danger); }
+
+  /* Empty mesajları */
+  .empty-msg {
+    text-align: center; padding: 30px 20px;
+    color: var(--text-light); font-style: italic; font-size: 13px;
+  }
+
+  /* ALACAK/BORÇ özel kartları */
+  .durum-kart-alacak {
+    background: linear-gradient(135deg, var(--bg-surface) 0%, #ecfdf5 100%);
+    border-left: 4px solid var(--success);
+  }
+  .durum-kart-borc {
+    background: linear-gradient(135deg, var(--bg-surface) 0%, #fef2f2 100%);
+    border-left: 4px solid var(--danger);
+  }
+  .durum-kart-net {
+    background: linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-body) 100%);
+    border-left: 4px solid var(--primary);
+  }
+
+  /* Bar grafik */
+  .grafik-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 20px 24px;
+    box-shadow: var(--shadow-blur);
+    margin-bottom: 24px;
+  }
+  .grafik-card-title {
+    font-size: 14px; font-weight: 700;
+    color: var(--text-main); margin-bottom: 18px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .bar-container {
+    display: flex; align-items: flex-end; gap: 14px;
+    height: 200px; padding: 0 8px;
+  }
+  .bar-col {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; height: 100%; min-width: 30px;
+  }
+  .bar-stack {
+    flex: 1; display: flex; flex-direction: column;
+    justify-content: flex-end; width: 100%; gap: 2px;
+  }
+  .bar-segment {
+    min-height: 2px; transition: height 0.3s; border-radius: 4px 4px 0 0;
+  }
+  .bar-segment.satis { background: var(--accent); }
+  .bar-segment.kar   { background: var(--primary-light); border-radius: 0 0 4px 4px; }
+  .bar-label-ay {
+    font-size: 11px; color: var(--text-muted);
+    margin-top: 8px; text-align: center; font-weight: 600;
+  }
+  .bar-label-deger {
+    font-size: 11px; font-weight: 700;
+    color: var(--accent); margin-top: 2px;
+  }
+  .grafik-legend {
+    display: flex; gap: 20px; margin-top: 16px;
+    justify-content: center; font-size: 12px;
+    color: var(--text-muted);
+  }
+  .grafik-legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch {
+    display: inline-block; width: 14px; height: 14px;
+    border-radius: 3px;
+  }
+</style>
+
+<div x-data="dashApp()" x-init="init()">
+
+  <!-- ════════════════ ÜST KPI'LAR (STOK + OPERASYON) ════════════════ -->
+  <div class="bolum-baslik"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Genel Durum</div>
+  <div class="kpi-grid">
+    <div class="kpi kpi-link" onclick="location='/stok?tip=BLOK'">
+      <div class="kpi-label">BLOK STOK</div>
+      <div class="kpi-val blue">{{ stats.blok }}</div>
+      <div class="kpi-detay">
+        <div class="satir">
+          <span class="usd">${{ '{:,.0f}'.format(stats.blok_usd|default(0)) }}</span>
+          <span class="olcu">{{ '{:,.1f}'.format(stats.blok_ton|default(0)) }} ton</span>
+        </div>
+        <div class="satir">
+          <span class="try-deg">₺{{ '{:,.0f}'.format(stats.blok_try|default(0)) }}</span>
+          <span class="olcu-alt">{{ '{:,.0f}'.format(stats.blok_m3|default(0)) }} m³</span>
+        </div>
+      </div>
+    </div>
+    <div class="kpi kpi-link" onclick="location='/stok?tip=PLAKA'">
+      <div class="kpi-label">PLAKA STOK</div>
+      <div class="kpi-val blue">{{ stats.plaka }}</div>
+      <div class="kpi-detay">
+        <div class="satir">
+          <span class="usd">${{ '{:,.0f}'.format(stats.plaka_usd|default(0)) }}</span>
+          <span class="olcu">{{ '{:,.0f}'.format(stats.plaka_m2|default(0)) }} m²</span>
+        </div>
+        <div class="satir">
+          <span class="try-deg">₺{{ '{:,.0f}'.format(stats.plaka_try|default(0)) }}</span>
+          <span class="olcu-alt">{{ '{:,.0f}'.format(stats.plaka_sqft|default(0)) }} sqft</span>
+        </div>
+      </div>
+    </div>
+    <div class="kpi kpi-link" onclick="location='/stok?tip=EBATLI'">
+      <div class="kpi-label">EBATLI STOK</div>
+      <div class="kpi-val blue">{{ stats.ebatli }}</div>
+      <div class="kpi-detay">
+        <div class="satir">
+          <span class="usd">${{ '{:,.0f}'.format(stats.ebatli_usd|default(0)) }}</span>
+          <span class="olcu">{{ '{:,.0f}'.format(stats.ebatli_m2|default(0)) }} m²</span>
+        </div>
+        <div class="satir">
+          <span class="try-deg">₺{{ '{:,.0f}'.format(stats.ebatli_try|default(0)) }}</span>
+          <span class="olcu-alt">{{ '{:,.0f}'.format(stats.ebatli_sqft|default(0)) }} sqft</span>
+        </div>
+      </div>
+    </div>
+    <div class="kpi kpi-link" onclick="location='/siparis'">
+      <div class="kpi-label">AKTİF SİPARİŞ</div>
+      <div class="kpi-val amber">{{ stats.siparis }}</div>
+      <div class="kpi-detay">
+        <div class="satir"><span class="usd">${{ '{:,.0f}'.format(stats.siparis_usd|default(0)) }}</span></div>
+        <div class="satir"><span class="try-deg">₺{{ '{:,.0f}'.format(stats.siparis_try|default(0)) }}</span></div>
+      </div>
+    </div>
+    <div class="kpi kpi-link" onclick="location='/rezervasyon'">
+      <div class="kpi-label">REZERVASYON</div>
+      <div class="kpi-val amber">{{ stats.rezervasyon }}</div>
+      <div class="kpi-detay">
+        <div class="satir"><span class="olcu-alt">Aktif kilitli taşlar</span></div>
+      </div>
+    </div>
+    <div class="kpi kpi-link" onclick="location='/sevkiyat'">
+      <div class="kpi-label">AKTİF SEVKİYAT</div>
+      <div class="kpi-val green">{{ stats.sevkiyat }}</div>
+      <div class="kpi-detay">
+        <div class="satir"><span class="olcu-alt">Yolda / Hazırlanıyor</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════ İŞ AKIŞI — BEKLEYEN İŞLER ════════════════ -->
+  <div class="bolum-baslik"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> İş Akışı — Bekleyen İşler</div>
+  <div class="akis-pano">
+    <div class="akis-kart" onclick="location='/proforma?bekleyen=fatura'">
+      <div class="akis-ust">
+        <span class="akis-ikon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2h14a1 1 0 0 1 1 1v18l-3-2-2 2-2-2-2 2-2-2-3 2V3a1 1 0 0 1 1-1z"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/></svg></span>
+        <span class="akis-sayi {{ 'dolu' if stats.akis.fatura_bekleyen > 0 else '' }}">{{ stats.akis.fatura_bekleyen }}</span>
+      </div>
+      <div class="akis-baslik">Faturalanmayı Bekleyen</div>
+      <div class="akis-alt">Proforma → Fatura</div>
+    </div>
+    <div class="akis-ok">→</div>
+    <div class="akis-kart" onclick="location='/siparis?durum=aktif'">
+      <div class="akis-ust">
+        <span class="akis-ikon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span>
+        <span class="akis-sayi {{ 'dolu' if stats.akis.sevk_bekleyen > 0 else '' }}">{{ stats.akis.sevk_bekleyen }}</span>
+      </div>
+      <div class="akis-baslik">Sevkiyat Bekleyen</div>
+      <div class="akis-alt">Sipariş → Sevkiyat</div>
+    </div>
+    <div class="akis-ok">→</div>
+    <div class="akis-kart" onclick="location='/fatura?yon=satis&acik=1'">
+      <div class="akis-ust">
+        <span class="akis-ikon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+        <span class="akis-sayi {{ 'dolu-yesil' if stats.akis.tahsilat_bekleyen > 0 else '' }}">{{ stats.akis.tahsilat_bekleyen }}</span>
+      </div>
+      <div class="akis-baslik">Tahsilat Bekleyen</div>
+      <div class="akis-alt">Müşteriden alacak</div>
+    </div>
+    <div class="akis-ok">→</div>
+    <div class="akis-kart" onclick="location='/fatura?yon=alis&acik=1'">
+      <div class="akis-ust">
+        <span class="akis-ikon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg></span>
+        <span class="akis-sayi {{ 'dolu-kirmizi' if stats.akis.odeme_bekleyen > 0 else '' }}">{{ stats.akis.odeme_bekleyen }}</span>
+      </div>
+      <div class="akis-baslik">Ödeme Bekleyen</div>
+      <div class="akis-alt">Tedarikçiye borç</div>
+    </div>
+  </div>
+
+  <!-- ════════════════ AKTİF SİPARİŞLER — AKIŞI BAŞLAT ════════════════ -->
+  <div class="bolum-baslik" style="display:flex; align-items:center; justify-content:space-between;">
+    <span style="display:flex; align-items:center; gap:9px;"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--accent)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2h6a1 1 0 0 1 1 1v1h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2V3a1 1 0 0 1 1-1z"/><path d="M9 13l2 2 4-4"/></svg> Aktif Siparişler — Akışı Başlat</span>
+    <a href="/siparis?yeni=1" style="display:inline-flex; align-items:center; gap:6px; background:var(--primary); color:#fff; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:700; text-decoration:none; text-transform:none; letter-spacing:0; transition:all 0.15s;"
+       onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
+      + Yeni Sipariş Oluştur
+    </a>
+  </div>
+  <div class="siparis-akis-panel">
+    <table class="siparis-akis-tbl">
+      <thead>
+        <tr>
+          <th>Sipariş</th>
+          <th>Müşteri</th>
+          <th>Ürün</th>
+          <th class="r">Tutar</th>
+          <th>Termin</th>
+          <th>Durum</th>
+          <th class="r">Sonraki Adım</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in akis_siparisler %}
+        <tr>
+          <td style="font-family:monospace; font-weight:700; color:var(--primary);">{{ s.id }}</td>
+          <td style="font-weight:600;">{{ s.musteri }}</td>
+          <td style="font-size:12px; color:var(--text-muted);">{{ s.cins }}</td>
+          <td class="r" style="font-weight:700; color:var(--success); font-family:monospace;">{{ '{:,.2f}'.format(s.tutar) }} {{ s.doviz }}</td>
+          <td style="white-space:nowrap; color:var(--text-muted); font-size:12px;">{{ s.termin }}</td>
+          <td><span class="badge badge-aktif">{{ s.durum }}</span></td>
+          <td class="r">
+            <div style="display:inline-flex; gap:6px; align-items:center;">
+              {% if s.proforma_var %}
+              <a href="/proforma" class="akis-mini-btn gri" title="Proformaları gör"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2h14a1 1 0 0 1 1 1v18l-3-2-2 2-2-2-2 2-2-2-3 2V3a1 1 0 0 1 1-1z"/></svg> Proforma ✓</a>
+              {% else %}
+              <a href="/proforma?siparis_id={{ s.id }}&musteri={{ s.musteri|urlencode }}" class="akis-mini-btn mavi" title="Bu siparişten proforma oluştur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 2h14a1 1 0 0 1 1 1v18l-3-2-2 2-2-2-2 2-2-2-3 2V3a1 1 0 0 1 1-1z"/><line x1="12" y1="7" x2="12" y2="13"/><line x1="9" y1="10" x2="15" y2="10"/></svg> Proforma Oluştur</a>
+              {% endif %}
+              {% if s.sevke_uygun %}
+                {% if s.sevkiyat_var %}
+                <a href="/sevkiyat" class="akis-mini-btn gri" title="Sevkiyatları gör"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Sevkiyat ✓</a>
+                {% else %}
+                <a href="/sevkiyat?siparis_id={{ s.id }}" class="akis-mini-btn yesil" title="Bu siparişten sevkiyat oluştur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Sevkiyat Oluştur</a>
+                {% endif %}
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7" class="empty-msg" style="text-align:center; padding:40px; color:var(--text-light);">Aktif sipariş yok. Yeni sipariş oluşturmak için <a href="/siparis" style="color:var(--primary); font-weight:600;">Sipariş sayfasına</a> gidin.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div style="padding:12px 16px; border-top:1px solid var(--border-soft); text-align:center;">
+      <a href="/siparis?yeni=1" style="color:var(--primary); font-weight:600; font-size:13px; text-decoration:none;">+ Yeni Sipariş Oluştur</a>
+      <span style="color:var(--text-light); margin:0 8px;">·</span>
+      <a href="/siparis" style="color:var(--text-muted); font-weight:600; font-size:13px; text-decoration:none;">Tümünü Gör →</a>
+    </div>
+  </div>
+
+  <!-- ════════════════ YAKLAŞAN TESLİMATLAR ════════════════ -->
+  <div class="panel-card" style="margin-bottom: 24px;">
+    <div class="panel-card-header">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Yaklaşan Teslimatlar
+      <span class="alt-info">(14 gün içinde)</span>
+    </div>
+    <div class="panel-card-body" style="max-height: none;">
+      <table class="mini-tbl">
+        <thead>
+          <tr>
+            <th>Sipariş</th>
+            <th>Müşteri</th>
+            <th>Ürün</th>
+            <th class="r">Miktar</th>
+            <th class="r">Tutar</th>
+            <th>Termin</th>
+            <th>Kalan</th>
+            <th>Durum</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in yaklasan %}
+          {% set kalan = (s.termin - today).days if s.termin else 0 %}
+          <tr class="tiklanabilir" onclick="location='/siparis'">
+            <td style="font-family:monospace; font-weight:700; color:var(--primary);">{{ s.id }}</td>
+            <td style="font-weight:600;">{{ s.musteri }}</td>
+            <td style="font-size:12px;">{{ s.urun_tip }} · {{ s.cins }}</td>
+            <td class="r">{{ s.miktar }} {{ s.birim }}</td>
+            <td class="r" style="font-weight:700; color:var(--success);">${{ '{:,.2f}'.format(s.toplam_tutar or 0) }}</td>
+            <td style="white-space:nowrap; color:var(--text-muted);">{{ s.termin.strftime('%d.%m.%Y') if s.termin else '—' }}</td>
+            <td>
+              <span class="badge" style="background: {% if kalan <= 3 %}#fee2e2; color: #991b1b{% elif kalan <= 7 %}#fef3c7; color: #92400e{% else %}#dcfce7; color: #166534{% endif %}">{{ kalan }} gün</span>
+            </td>
+            <td><span class="badge badge-aktif">{{ s.durum }}</span></td>
+          </tr>
+          {% else %}
+          <tr><td colspan="8" class="empty-msg">Yaklaşan teslimat yok.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Dashboard root scope (gerek varsa diye boş init bırakıldı)
+function dashApp() {
+  return { init() {} };
+}
+</script>
+{% endblock %}

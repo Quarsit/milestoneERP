@@ -1,0 +1,1436 @@
+{% extends "base.html" %}
+{% block title %}Stok Yönetimi{% endblock %}
+{% block header_title %}Stok Ambar Yönetimi{% endblock %}
+{% block content %}
+<style>
+  /* ─────────────────────────────────────────────────────────
+     STOK MODÜLÜ — Light Luxury Table Layout
+     ───────────────────────────────────────────────────────── */
+
+  /* Eksik base class'ları */
+  .btn-outline {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-mid);
+    color: var(--text-main);
+  }
+  .btn-outline:hover { background: var(--border-soft); }
+  .btn-secondary {
+    background: var(--border-soft);
+    border: 1px solid var(--border-soft);
+    color: var(--text-main);
+  }
+  .btn-secondary:hover { background: var(--border-mid); }
+
+  /* Sekme Çubuğu */
+  .stok-tip-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 4px; margin-bottom: 24px;
+    background: var(--border-soft); padding: 6px;
+    border-radius: var(--radius-sm);
+  }
+  .stok-tip-grup { display: flex; gap: 4px; }
+  .stok-tip-btn {
+    padding: 10px 24px; border-radius: 6px;
+    font-weight: 600; font-size: 13px; cursor: pointer;
+    border: none; background: transparent; color: var(--text-muted);
+    transition: all 0.2s ease;
+  }
+  .stok-tip-btn:hover { color: var(--primary); }
+  .stok-tip-btn.active {
+    background: var(--bg-surface); color: var(--primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    font-weight: 700;
+  }
+  .stok-tip-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* Filtre ve arama */
+  .filter-bar-modern {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    margin-bottom: 24px;
+    background: var(--bg-surface); padding: 20px;
+    border-radius: var(--radius-md); border: 1px solid var(--border-soft);
+    align-items: flex-end; box-shadow: var(--shadow-blur);
+  }
+  .filter-item {
+    display: flex; flex-direction: column; gap: 6px; min-width: 150px;
+  }
+  .filter-item label {
+    font-size: 11px; font-weight: 700; color: var(--text-light);
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .filter-item select, .filter-item input {
+    padding: 10px 14px; border: 1px solid var(--border-mid);
+    border-radius: var(--radius-sm); background: var(--bg-surface);
+    color: var(--text-main); font-size: 13px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .filter-item select:focus, .filter-item input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(35, 40, 36, 0.04);
+  }
+  .filter-search { flex: 1; min-width: 220px; }
+
+  /* Toplu işlem barı */
+  .toplu-islem-bar {
+    background: var(--bg-surface); padding: 14px 20px;
+    border-radius: var(--radius-md); border: 1px solid var(--border-soft);
+    margin-bottom: 24px; box-shadow: var(--shadow-blur);
+  }
+  .toplu-islem-group {
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  }
+
+  /* Tablo */
+  .data-table-wrapper {
+    background: var(--bg-surface); border-radius: var(--radius-md);
+    border: 1px solid var(--border-soft); box-shadow: var(--shadow-blur);
+    overflow-x: auto; margin-bottom: 24px;
+  }
+  .stok-table {
+    width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;
+  }
+  .stok-table th {
+    background: var(--bg-body); color: var(--text-muted);
+    padding: 16px 20px; font-weight: 600;
+    border-bottom: 1px solid var(--border-soft);
+    text-transform: uppercase; font-size: 11px;
+    letter-spacing: 0.5px; white-space: nowrap;
+  }
+  .stok-table td {
+    padding: 16px 20px; border-bottom: 1px solid var(--border-soft);
+    color: var(--text-main); vertical-align: middle;
+  }
+  .stok-table tr:hover { background-color: var(--row-hover); }
+
+  /* Satır renklendirme */
+  .satildi-row { background-color: rgba(234, 231, 223, 0.45) !important; opacity: 0.7; }
+  .satildi-row td { text-decoration: line-through; color: var(--text-muted) !important; }
+  .rezerve-row { background-color: var(--warn-bg) !important; }
+
+  /* Durum rozetleri */
+  .badge {
+    padding: 4px 12px; border-radius: 30px;
+    font-size: 11px; font-weight: 700;
+    border: 1px solid transparent;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .badge-serbest { background: var(--success-bg); color: var(--success); border-color: #CBD6CC; }
+  .badge-rezerve { background: var(--warn-bg); color: #8A6D1B; border-color: #E8DCB0; }
+  .badge-satildi { background: #EDE9E1; color: var(--text-muted); border-color: var(--border-mid); }
+  .badge-sevkedildi { background: var(--info-bg); color: var(--info); border-color: #C4D2E6; }
+  .badge-teslim-edildi { background: var(--success-bg); color: var(--success); border-color: #CBD6CC; }
+
+  /* Hücre stilleri */
+  .checkbox-col { width: 40px; text-align: center; }
+  .id-col { font-family: monospace; font-size: 11px; font-weight: 700; color: var(--primary); }
+  .blok-col { font-family: monospace; font-weight: 600; color: var(--text-main); }
+  .cins-col { font-weight: 700; color: var(--text-main); }
+  .olcu-col { font-size: 12px; color: var(--text-muted); }
+  .miktar-col { font-weight: 700; color: var(--primary); text-align: right; }
+  .fiyat-col { font-weight: 600; color: var(--success); text-align: right; }
+  .maliyet-col { font-weight: 700; color: var(--accent); text-align: right; }
+  .durum-col { text-align: center; }
+  .actions-col { width: 140px; text-align: right; }
+
+  /* Aksiyon butonları */
+  .action-buttons { display: flex; gap: 6px; justify-content: flex-end; }
+  .btn-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    border: 1px solid var(--border-mid); background: var(--bg-surface);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s ease; color: var(--text-muted);
+  }
+  .btn-icon svg { width: 15px; height: 15px; stroke-width: 1.8; }
+  .btn-icon:hover { background: var(--border-soft); transform: translateY(-1px); }
+  .btn-icon.btn-danger { background: var(--bg-surface); color: var(--text-muted); border-color: var(--border-mid); }
+  .btn-icon.btn-danger:hover { background: var(--danger-bg); border-color: #E2C9C5; color: var(--danger); }
+
+  /* Tarihçe modal */
+  .tarihce-list { position: relative; padding-left: 20px; margin-top: 16px; }
+  .tarihce-line {
+    position: absolute; left: 6px; top: 8px; bottom: 8px;
+    width: 3px; background: var(--border-mid); border-radius: 2px;
+  }
+  .tarihce-item { position: relative; padding-bottom: 20px; }
+  .tarihce-dot {
+    position: absolute; left: -21px; top: 6px;
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 3px solid var(--bg-surface);
+  }
+  .tarihce-content {
+    background: var(--bg-surface); border: 1px solid var(--border-soft);
+    border-radius: 8px; padding: 12px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  }
+  .tarihce-header {
+    display: flex; justify-content: space-between;
+    align-items: center; margin-bottom: 4px;
+  }
+  .tarihce-title { font-weight: 700; font-size: 13px; color: var(--primary); }
+  .tarihce-date { font-size: 11px; color: var(--text-light); }
+  .tarihce-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+  .tarihce-user { font-size: 10px; color: var(--text-light); }
+  .tarihce-detail {
+    margin-top: 8px; padding: 8px;
+    background: var(--bg-body); border-radius: 6px;
+    font-size: 11px; color: var(--text-muted);
+  }
+
+  /* Form alanları (genel form-group base'de var ama override) */
+  .form-grid { display: grid; gap: 20px; }
+  .form-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+  .form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-grid.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  @media (max-width: 700px) {
+    .form-grid.cols-2, .form-grid.cols-3, .form-grid.cols-4 { grid-template-columns: 1fr; }
+  }
+</style>
+
+<div x-data="stokApp()" x-init="init()">
+
+  <!-- Sekme bar -->
+  <div class="stok-tip-bar">
+    <div class="stok-tip-grup">
+      <template x-for="t in ['BLOK','PLAKA','EBATLI']" :key="t">
+        <button @click="sekmeDegistir(t)" :class="activeTab==t?'stok-tip-btn active':'stok-tip-btn'" x-text="t + ' STOK'"></button>
+      </template>
+    </div>
+    <div class="stok-tip-actions">
+      <button class="btn btn-primary" @click="yeniModalAc()">+ Yeni Ekle</button>
+      <button class="btn btn-secondary" style="margin-left:8px;" @click="window.open('/api/export/stok?tip='+activeTab+'&format=xlsx','_blank')" title="Excel'e aktar">📊 Excel</button>
+      <button class="btn btn-secondary" @click="window.open('/api/export/stok?tip='+activeTab+'&format=pdf','_blank')" title="PDF'e aktar">📄 PDF</button>
+      <button class="btn btn-outline" style="border-color:var(--info); color:var(--info);" @click="importModalAc()" x-show="activeTab=='PLAKA'"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Toplu Excel Import</button>
+    </div>
+  </div>
+
+  <!-- Toplu işlem barı -->
+  <div class="toplu-islem-bar" x-show="rows.length > 0">
+    <div class="toplu-islem-group">
+      <button class="btn btn-secondary" @click="toggleTumunuSec()" x-text="tumSecili ? 'Seçimi Kaldır' : 'Tümünü Seç'"></button>
+      <button class="btn btn-danger" @click="seciliSil()" :disabled="seciliIds.length === 0">
+        Seçilenleri Sil
+        <span class="badge" x-show="seciliIds.length > 0" x-text="seciliIds.length"
+              style="background:#fff; color:var(--danger); margin-left:6px; padding:2px 6px;"></span>
+      </button>
+      <button class="btn btn-outline" style="border-color:var(--accent); color:var(--accent);" @click="blokIleSilModalAc()">Blok No'ya Göre Toplu Sil</button>
+      <span style="margin-left:auto; font-size:12px; color:var(--text-muted); font-weight:600;"
+            x-text="filtrelenmisRows.length + ' stok listelendi'"></span>
+    </div>
+  </div>
+
+  <!-- Filtreler -->
+  <div class="filter-bar-modern">
+    <div class="filter-item">
+      <label>Taş Cinsi</label>
+      <select x-model="filtre.cins" @change="sayfaSifirlaVeListele()">
+        <option value="">Tümü</option>
+        <template x-for="c in lookup.cins"><option :value="c" x-text="c"></option></template>
+      </select>
+    </div>
+    <div class="filter-item">
+      <label>Üretici Kodu</label>
+      <select x-model="filtre.uretici" @change="sayfaSifirlaVeListele()">
+        <option value="">Tümü</option>
+        <template x-for="u in lookup.uretici"><option :value="u" x-text="u"></option></template>
+      </select>
+    </div>
+    <div class="filter-item">
+      <label>Mevcut Durum</label>
+      <select x-model="filtre.durum" @change="sayfaSifirlaVeListele()">
+        <option value="aktif">Aktif Envanter (Teslim Hariç)</option>
+        <option value="">Tümü (Geçmiş Arşiv Dahil)</option>
+        <option value="Serbest">Serbest</option>
+        <option value="Rezerve">Rezerve</option>
+        <option value="Satildi">Satıldı</option>
+        <option value="Sevkedildi">Sevkedildi</option>
+        <option value="Teslim Edildi">Teslim Edildi</option>
+      </select>
+    </div>
+    <div class="filter-item filter-search">
+      <label>Hızlı Arama</label>
+      <input type="text" x-model="filtre.arama" placeholder="ID Kodu, Blok No, Cins Ara...">
+    </div>
+  </div>
+
+  <!-- Tablo -->
+  <div class="data-table-wrapper" x-show="filtrelenmisRows.length > 0">
+    <table class="stok-table">
+      <thead>
+        <tr>
+          <th class="checkbox-col"><input type="checkbox" @click="toggleTumunuSec()" :checked="tumSecili && rows.length > 0"></th>
+          <th x-text="activeTab === 'EBATLI' ? 'Kasa No' : (activeTab === 'PLAKA' ? 'Plaka No' : 'Blok No')"></th>
+          <th>Mermer Cinsi</th>
+          <th x-show="activeTab !== 'BLOK'">Özellik / Yüzey</th>
+          <th>Ölçü Detayı (cm)</th>
+          <th style="text-align:right;">Net Miktar</th>
+          <th x-show="activeTab === 'BLOK'" style="text-align:right;">Tonaj</th>
+          <th style="text-align:right;">Alış Fiyatı <span style="font-weight:400; font-size:9px; text-transform:none;">(KDV Hariç)</span></th>
+          <th style="text-align:right;">Birim Maliyet <span style="font-weight:400; font-size:9px; text-transform:none;">(alış + ek mal.)</span></th>
+          <th style="text-align:right;">Toplam Maliyet</th>
+          <th style="text-align:center;">Durum</th>
+          <th class="actions-col">İşlemler</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="r in filtrelenmisRows" :key="r.id">
+          <tr :class="{'satildi-row': r.durum === 'Satildi', 'rezerve-row': r.durum === 'Rezerve'}">
+            <td class="checkbox-col"><input type="checkbox" x-model="seciliIds" :value="r.id"></td>
+            <td class="blok-col" x-text="activeTab === 'PLAKA' ? ((r.blok_no ? r.blok_no + '-' : '') + (r.slab_no || '') || r.id) : (r.blok_no || r.kasa_no || '-')"></td>
+            <td class="cins-col" x-text="r.cins"></td>
+            <td class="ozellik-col" x-show="activeTab !== 'BLOK'" x-text="r.ozellik || '-'"></td>
+            <td class="olcu-col" x-text="r.boy ? (r.boy+'x'+r.yukseklik+(r.en ? 'x'+r.en : (r.kalinlik?'x'+r.kalinlik:''))) : '-'"></td>
+            <td class="miktar-col">
+              <span x-show="activeTab=='BLOK'" x-text="(r.hacim?Utils.fmt3(r.hacim)+' m³':'')"></span>
+              <span x-show="activeTab=='PLAKA'" x-text="(r.m2?Utils.fmt3(r.m2)+' m²':'')"></span>
+              <span x-show="activeTab=='EBATLI'" x-text="(r.m2?Utils.fmt3(r.m2)+' m²':'')"></span>
+            </td>
+            <td class="tonaj-col" x-show="activeTab=='BLOK'" style="text-align:right;">
+              <span x-text="r.tonaj ? Utils.fmt3(r.tonaj)+' ton' : '-'"></span>
+            </td>
+            <td class="fiyat-col">
+              <span x-text="r.fiyat ? Utils.fmt3(r.fiyat) : '0'"></span>
+              <span x-text="r.doviz"></span><span style="color:var(--text-muted); font-size:11px;" x-text="'/' + birimEtiket(r.fiyat_birim)"></span>
+              <span x-show="r.kdv_dahil_mi && r.kdv_oran > 0"
+                    style="display:inline-block; margin-left:4px; padding:2px 6px; background:#dcfce7; color:#15803d; border-radius:6px; font-size:9px; font-weight:700"
+                    :title="'KDV %' + r.kdv_oran + ' (Tutar: ' + Utils.fmt3(r.kdv_tutar) + ' ' + r.doviz + ')'">
+                +%<span x-text="r.kdv_oran"></span> KDV
+              </span>
+            </td>
+            <td class="maliyet-col" style="text-align:right;">
+              <span style="font-weight:700;" x-text="Utils.fmt3(r.birim_maliyet_usd || 0)"></span> $
+              <span style="color:var(--text-muted); font-size:10px;" x-text="'/' + (r.birim_ad || '')"></span>
+            </td>
+            <td class="maliyet-col">
+              <span x-text="Utils.fmt3(r.toplam_maliyet_usd || 0)"></span> $
+              <template x-if="r.ek_maliyet_toplam > 0">
+                <span style="color:var(--danger); cursor:help;" :title="'Ek maliyet: $' + Utils.fmt3(r.ek_maliyet_toplam)">●</span>
+              </template>
+              <template x-if="r.kdv_devreden_usd > 0">
+                <span style="display:inline-block; margin-left:4px; font-size:9px; color:#15803d; font-weight:700" :title="'Devreden KDV: $' + Utils.fmt3(r.kdv_devreden_usd)">+KDV(D)</span>
+              </template>
+              <template x-if="r.kdv_iade_usd > 0">
+                <span style="display:inline-block; margin-left:4px; font-size:9px; color:#0369a1; font-weight:700" :title="'İade KDV: $' + Utils.fmt3(r.kdv_iade_usd)">+KDV(İ)</span>
+              </template>
+            </td>
+            <td class="durum-col">
+              <span class="badge" :class="'badge-'+r.durum.replace(/ /g, '-').toLowerCase()" x-text="r.durum"></span>
+              <template x-if="r.fatura_durumu === 'faturasiz'">
+                <span class="badge" style="background:#FEF3C7; color:#92400E; display:block; margin-top:3px; font-size:9px;">⏳ Fatura Bekliyor</span>
+              </template>
+              <template x-if="r.fatura_durumu === 'mal_bekliyor'">
+                <span class="badge" style="background:#DBEAFE; color:#1E40AF; display:block; margin-top:3px; font-size:9px;">🚚 Mal Bekliyor</span>
+              </template>
+            </td>
+            <td class="actions-col">
+              <div class="action-buttons">
+                <template x-if="r.fatura_durumu === 'faturasiz'">
+                  <button class="btn-icon" @click="faturalandirAc(r)" title="Faturalandır (fatura geldi)" style="color:#92400E;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="15" x2="15" y2="15"/></svg></button>
+                </template>
+                <template x-if="r.fatura_durumu === 'mal_bekliyor'">
+                  <button class="btn-icon" @click="malTeslimAl(r)" title="Mal Teslim Al (mal geldi)" style="color:#1E40AF;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></button>
+                </template>
+                <button class="btn-icon" @click="tarihceAc(r)" title="Tarihçe" style="color:var(--info);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+                <button class="btn-icon" @click="duzenleAc(r)" title="Düzenle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
+                <button class="btn-icon btn-danger" @click="stokSil(r.id)" title="Sil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+              </div>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+
+  <div x-show="filtrelenmisRows.length === 0"
+       style="text-align:center; padding:60px 20px; background:var(--bg-surface); border:1px dashed var(--border-mid); border-radius:var(--radius-md); color:var(--text-light); font-size:14px;">
+    Depoda bu kriterlere uygun kayıt bulunmuyor.
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       TARİHÇE MODAL
+       ════════════════════════════════════════════════════ -->
+  <div class="modal-bg" x-show="tarihceModal" x-cloak @click.self="tarihceModal=false">
+    <div class="modal" style="width:min(800px, 95vw); max-height:90vh; overflow:auto">
+      <div class="modal-title">
+        <span>Stok Tarihçesi: <span x-text="tarihceStok.id" style="color:var(--accent); font-family:monospace"></span></span>
+        <span class="modal-close" @click="tarihceModal=false">×</span>
+      </div>
+
+      <div x-show="tarihceStok.id" style="background:var(--bg-body); border:1px solid var(--border-soft); border-radius:var(--radius-sm); padding:16px; margin-bottom:20px">
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; font-size:13px">
+          <div><strong style="color:var(--text-muted)">Tip:</strong> <span style="font-weight:600" x-text="tarihceStok.tip"></span></div>
+          <div><strong style="color:var(--text-muted)">Cins:</strong> <span style="font-weight:600" x-text="tarihceStok.cins"></span></div>
+          <div><strong style="color:var(--text-muted)">Üretici:</strong> <span x-text="tarihceStok.uretici || '-'"></span></div>
+          <div><strong style="color:var(--text-muted)">Blok/Ref:</strong>
+            <span style="font-family:monospace; color:var(--primary); font-weight:700;" x-text="tarihceStok.blok_no || tarihceStok.kasa_no || '-'"></span>
+          </div>
+          <div><strong style="color:var(--text-muted)">Ölçü:</strong>
+            <span x-text="tarihceStok.boy ? (tarihceStok.boy + 'x' + tarihceStok.yukseklik + (tarihceStok.en ? 'x' + tarihceStok.en : (tarihceStok.kalinlik ? 'x' + tarihceStok.kalinlik : ''))) : '-'"></span>
+          </div>
+          <div><strong style="color:var(--text-muted)">Durum:</strong>
+            <span class="badge" :class="'badge-' + (tarihceStok.durum || '').replace(/ /g, '-').toLowerCase()" x-text="tarihceStok.durum"></span>
+          </div>
+        </div>
+      </div>
+
+      <div x-show="tarihceLoading" style="text-align:center; padding:20px; color:var(--text-muted);">
+        ⏳ Olay kayıtları yükleniyor...
+      </div>
+
+      <div x-show="!tarihceLoading && tarihceOlaylar.length > 0">
+        <div style="text-align:right; margin-bottom:10px; color:var(--text-muted); font-size:12px; font-weight:600;">
+          Toplam <span x-text="tarihceOlaylar.length" style="color:var(--primary);"></span> log kaydı.
+        </div>
+        <div class="tarihce-list">
+          <div class="tarihce-line"></div>
+          <template x-for="(o, i) in tarihceOlaylar" :key="i">
+            <div class="tarihce-item">
+              <div class="tarihce-dot" :style="olayDotStil(o.renk)"></div>
+              <div class="tarihce-content" :style="'border-left:4px solid ' + olayBorderStil(o.renk)">
+                <div class="tarihce-header">
+                  <div class="tarihce-title" x-text="o.baslik"></div>
+                  <div class="tarihce-date" x-text="o.tarih ? new Date(o.tarih).toLocaleString('tr-TR') : '-'"></div>
+                </div>
+                <div class="tarihce-desc" x-show="o.aciklama" x-text="o.aciklama"></div>
+                <div class="tarihce-user" x-show="o.kullanici"><span style="font-weight:600;" x-text="o.kullanici"></span></div>
+                <div class="tarihce-detail" x-show="o.detay && Object.keys(o.detay).length > 0">
+                  <template x-for="(v, k) in (o.detay || {})" :key="k">
+                    <div x-show="v !== null && v !== undefined && v !== ''">
+                      <strong x-text="k + ':'" style="color:var(--text-main);"></strong> <span x-text="v"></span>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <div x-show="!tarihceLoading && tarihceOlaylar.length === 0"
+           style="text-align:center; padding:40px; color:var(--text-light); border:1px dashed var(--border-soft); border-radius:var(--radius-sm);">
+        Bu stok kartı için kayıt yok.
+      </div>
+
+      <div style="margin-top:24px; text-align:right">
+        <button class="btn btn-secondary" @click="tarihceModal=false">Pencereyi Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       BLOK NO İLE TOPLU SİL MODAL
+       ════════════════════════════════════════════════════ -->
+  <div class="modal-bg" x-show="blokSilModal" x-cloak @click.self="blokSilModal=false">
+    <div class="modal" style="width:500px">
+      <div class="modal-title">
+        Blok Kodu İle Toplu Silme<span class="modal-close" @click="blokSilModal=false">×</span>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+        <div class="form-group">
+          <label>Referans Blok No *</label>
+          <select x-model="blokSilForm.blok_no" @change="blokSilinecekleriHesapla()" required>
+            <option value="">Seçiniz</option>
+            <template x-for="b in blokNoListesi" :key="b"><option :value="b" x-text="b"></option></template>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Durum Filtresi</label>
+          <select x-model="blokSilForm.durum" @change="blokSilinecekleriHesapla()">
+            <option value="">Tümü</option>
+            <template x-for="d in lookup.durum"><option :value="d" x-text="d"></option></template>
+          </select>
+        </div>
+      </div>
+      <div style="background:var(--warn-bg); border:1px solid #E8DCB0; color:#8A6D1B; padding:12px 16px; border-radius:var(--radius-sm); font-size:13px; line-height:1.4;">
+        <strong>Uyarı:</strong> Seçilen blok numarasına ait <strong><span x-text="blokSilinecekAdet" style="font-size:15px;"></span></strong> adet ürün kalıcı silinecek. Geri alınamaz.
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:20px;">
+        <button class="btn btn-secondary" @click="blokSilModal=false">İptal</button>
+        <button class="btn btn-danger" @click="blokIleSil()" :disabled="!blokSilForm.blok_no || blokSilinecekAdet === 0">Kalıcı Olarak Sil</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       YENİ EKLE MODAL
+       ════════════════════════════════════════════════════ -->
+  <div class="modal-bg" x-show="yeniModal" x-cloak @click.self="yeniModal=false">
+    <div class="modal" style="width:min(900px, 95vw)">
+      <div class="modal-title">
+        <span>Yeni <span x-text="activeTab" style="color:var(--accent)"></span> Kartı Oluştur</span>
+        <span class="modal-close" @click="yeniModal=false">×</span>
+      </div>
+      <form @submit.prevent="yeniKaydet()">
+
+        <div class="form-grid cols-3" style="margin-bottom:20px;">
+          <div class="form-group">
+            <label>Mermer Cinsi *</label>
+            <select x-model="yeniForm.cins" required>
+              <option value="">Seçiniz</option>
+              <template x-for="c in lookup.cins"><option :value="c" x-text="c"></option></template>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tedarikçi / Üretici</label>
+            <select x-model="yeniForm.uretici">
+              <option value="">Seçiniz</option>
+              <template x-for="u in lookup.uretici"><option :value="u" x-text="u"></option></template>
+            </select>
+          </div>
+          <div class="form-group" x-show="activeTab != 'BLOK'">
+            <label>Özellik / Yüzey</label>
+            <select x-model="yeniForm.ozellik">
+              <option value="">Seçiniz</option>
+              <template x-for="o in lookup.ozellik"><option :value="o" x-text="o"></option></template>
+            </select>
+          </div>
+          <div class="form-group" x-show="activeTab == 'BLOK'">
+            <label>Net Hacim (m³)</label>
+            <input type="text" readonly x-model="yeniForm.hacim_m3" style="background:var(--bg-body);">
+          </div>
+          <div class="form-group">
+            <label>Fatura No <span style="color:var(--text-light); font-weight:400;">(Cari hareketine evrak no olarak yazılır)</span></label>
+            <input type="text" x-model="yeniForm.fatura_no" placeholder="Örn: ANK-2026-1001" data-testid="stok-form-fatura-no">
+          </div>
+        </div>
+
+        <!-- ─── FATURA DURUMU + TARİHLER (mal/fatura zaman farkı) ─── -->
+        <div class="form-grid" style="background:#F0F7FF; padding:14px 16px; border-radius:10px; border:1px solid #CFE3FA; margin-bottom:4px;">
+          <div class="form-group">
+            <label>Fatura Durumu</label>
+            <select x-model="yeniForm.fatura_durumu" @change="faturaDurumuDegisti()">
+              <option value="faturali">Faturalı (mal + fatura birlikte)</option>
+              <option value="faturasiz">Faturasız (mal geldi, fatura bekliyor)</option>
+              <option value="mal_bekliyor">Mal Bekliyor (fatura kesildi, mal gelmedi)</option>
+            </select>
+            <span style="font-size:11px; color:var(--text-muted);"
+                  x-text="faturaDurumuAciklama"></span>
+          </div>
+          <div class="form-group" x-show="yeniForm.fatura_durumu !== 'mal_bekliyor'">
+            <label>Mal Giriş Tarihi <span style="color:var(--text-light); font-weight:400;">(depoya giriş)</span></label>
+            <input type="date" x-model="yeniForm.giris_tarihi">
+          </div>
+          <div class="form-group" x-show="yeniForm.fatura_durumu !== 'faturasiz'">
+            <label>Fatura / Alış Tarihi <span style="color:#C2410C; font-weight:400;">(borç bu tarihte doğar)</span></label>
+            <input type="date" x-model="yeniForm.alis_tarihi">
+          </div>
+        </div>
+
+        <div class="form-grid cols-3" style="margin-bottom:20px;">
+          <div class="form-group">
+            <label>Boy Uzunluğu (cm)</label>
+            <input type="number" step="0.1" x-model="yeniForm.boy" @input="boyYukseklikDegisti()">
+          </div>
+          <div class="form-group">
+            <label>Yükseklik (cm)</label>
+            <input type="number" step="0.1" x-model="yeniForm.yukseklik" @input="boyYukseklikDegisti()">
+          </div>
+          <div class="form-group" x-show="activeTab == 'BLOK'">
+            <label>En Genişliği (cm)</label>
+            <input type="number" step="0.1" x-model="yeniForm.en" @input="boyYukseklikDegisti()">
+          </div>
+          <div class="form-group" x-show="activeTab != 'BLOK'">
+            <label>Kalınlık (cm)</label>
+            <input type="number" step="0.1" x-model="yeniForm.kalinlik">
+          </div>
+        </div>
+
+        <div class="form-grid cols-4" style="margin-bottom:20px;">
+          <div class="form-group">
+            <label>Birim Alış Fiyatı <span style="font-size:10px; font-weight:400; color:var(--text-light);">(KDV dahil ise içinden düşülür)</span></label>
+            <input type="number" step="0.01" min="0" x-model="yeniForm.fiyat" @input="kdvHesapla()">
+          </div>
+          <div class="form-group">
+            <label>Maliyet Birimi</label>
+            <select x-model="yeniForm.fiyat_birim" @change="kdvHesapla()">
+              <template x-if="activeTab == 'BLOK'">
+                <optgroup label="Blok"><option value="ton">$/ton</option><option value="m3">$/m³</option></optgroup>
+              </template>
+              <template x-if="activeTab != 'BLOK'">
+                <optgroup label="Plaka/Ebatlı"><option value="m2">$/m²</option><option value="sqft">$/sqft</option></optgroup>
+              </template>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Döviz Tipi</label>
+            <select x-model="yeniForm.doviz">
+              <option>USD</option><option>EUR</option><option>TRY</option>
+            </select>
+          </div>
+          <div class="form-group" x-show="activeTab == 'BLOK'">
+            <label>Ağırlık (Ton)</label>
+            <input type="number" step="0.01" min="0" x-model="yeniForm.tonaj" @input="kdvHesapla()">
+          </div>
+        </div>
+
+        <!-- KDV Alış Rejimi -->
+        <div style="background:var(--bg-body); border:1px solid var(--border-soft); border-radius:var(--radius-md); padding:16px; margin-bottom:20px;">
+          <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px; padding-bottom:12px; border-bottom:1px dashed var(--border-mid)">
+            <label style="font-weight:700; color:var(--primary); font-size:13px; margin:0">Ticari Alış Rejimi:</label>
+            <select x-model="yeniForm.alis_tipi" @change="alisTipiDegisti()"
+                    style="padding:6px 12px; border:1px solid var(--border-mid); border-radius:var(--radius-sm); font-weight:600; background:#fff">
+              <option value="yurtici_kdvli">Yurt İçi (KDV'li Fatura)</option>
+              <option value="ihrac_kayitli">İhraç Kayıtlı (KDV Muaf)</option>
+              <option value="yurtici_kdvsiz">Yurt İçi Özel Muafiyet</option>
+              <option value="ithalat">İthalat (Dış Alım)</option>
+            </select>
+          </div>
+          <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;" x-show="yeniForm.alis_tipi === 'yurtici_kdvli'">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:600;">
+              <input type="checkbox" x-model="yeniForm.kdv_dahil_mi" @change="kdvHesapla()" style="width:16px; height:16px; margin:0;">
+              Fiyata KDV Dahil
+            </label>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <label style="font-size:12px; font-weight:700; color:var(--text-muted); margin:0;">KDV Oranı (%)</label>
+              <input type="number" step="0.01" min="0" max="100" x-model="yeniForm.kdv_oran" @input="kdvHesapla()"
+                     style="width:80px; padding:6px; border:1px solid var(--border-mid); border-radius:var(--radius-sm);">
+            </div>
+            <div style="margin-left:auto; font-size:12px; color:var(--text-muted); text-align:right;">
+              <div>Net Matrah: <strong style="color:var(--text-main);" x-text="Utils.fmt3(yeniForm.matrah_onizleme) + ' ' + yeniForm.doviz"></strong></div>
+              <div>KDV: <strong style="color:var(--success);" x-text="Utils.fmt3(yeniForm.kdv_tutar_onizleme) + ' ' + yeniForm.doviz"></strong></div>
+            </div>
+          </div>
+          <div x-show="yeniForm.alis_tipi !== 'yurtici_kdvli'" style="font-size:12px; color:var(--text-muted); font-style:italic;">
+            Bu rejimde KDV hesaplanmaz. Fiyat doğrudan net matrah kabul edilir.
+          </div>
+        </div>
+
+        <div class="form-grid cols-2" style="margin-bottom:20px;">
+          <div class="form-group" x-show="activeTab == 'PLAKA'">
+            <label>Üretilecek Plaka Adedi</label>
+            <input type="number" x-model="yeniForm.adet" min="1">
+          </div>
+          <div class="form-group" x-show="activeTab == 'PLAKA'">
+            <label>Başlangıç Sıra (Slab) No</label>
+            <input type="number" x-model="yeniForm.baslangic_no" min="1" placeholder="1">
+          </div>
+
+          <div class="form-group" x-show="activeTab == 'EBATLI'"
+               style="background:var(--warn-bg); padding:16px; border-radius:var(--radius-md); border:1px solid #E8DCB0; grid-column:1/-1">
+            <label style="font-size:13px; font-weight:800; color:#8A6D1B; display:block; margin-bottom:12px;">Ebatlı Kasa Parametreleri</label>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+              <div>
+                <label style="font-size:11px; font-weight:700; color:#8A6D1B; display:block; margin-bottom:6px;">Kasa İçi Parça Adedi *</label>
+                <input type="number" x-model="yeniForm.kasa_ici_adet" min="1" @input="boyYukseklikDegisti()"
+                       style="background:#fff; border-color:#E8DCB0;">
+              </div>
+              <div>
+                <label style="font-size:11px; font-weight:700; color:#8A6D1B; display:block; margin-bottom:6px;">Üretilecek Kasa Sayısı *</label>
+                <input type="number" x-model="yeniForm.kasa_adedi" min="1"
+                       style="background:#fff; border-color:#E8DCB0;">
+              </div>
+            </div>
+            <div style="margin-top:8px; font-size:11px; color:#8A6D1B;">
+              Sistem <strong x-text="yeniForm.kasa_adedi || 1"></strong> adet ayrı barkodlu kasa stoku oluşturacak.
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:20px;">
+          <label x-text="activeTab === 'EBATLI' ? 'Manuel Referans / Kasa Kodu (Boşsa sistem üretir)' : 'Blok Numarası (Referans)'"></label>
+          <input type="text" x-model="yeniForm.blok_no" :placeholder="activeTab === 'EBATLI' ? 'Örn: MRM-IVT122612A-1' : 'Blok no girin'">
+        </div>
+
+        <div class="form-group" style="margin-bottom:20px;">
+          <label>Genel Açıklama / Depo Notu</label>
+          <textarea x-model="yeniForm.aciklama" rows="2" style="resize:vertical;"></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px; padding-top:20px; border-top:1px solid var(--border-soft);">
+          <button type="button" class="btn btn-secondary" @click="yeniModal=false">İptal</button>
+          <button type="submit" class="btn btn-primary" style="padding:10px 24px;"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Stok Kartını Oluştur</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       DÜZENLE MODAL (EKSIKTI - EKLENDI)
+       ════════════════════════════════════════════════════ -->
+  <div class="modal-bg" x-show="duzModal" x-cloak @click.self="duzModal=false">
+    <div class="modal" style="width:min(620px, 95vw)">
+      <div class="modal-title">
+        <span>Stok Düzenle: <span x-text="duzForm.id" style="color:var(--accent); font-family:monospace"></span></span>
+        <span class="modal-close" @click="duzModal=false">×</span>
+      </div>
+
+      <form @submit.prevent="duzKaydet()">
+        <div class="form-grid cols-2" style="margin-bottom:20px;">
+          <div class="form-group">
+            <label>Durum</label>
+            <select x-model="duzForm.durum">
+              <template x-for="d in lookup.durum" :key="d"><option :value="d" x-text="d"></option></template>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tedarikçi <span style="font-weight:400; font-size:11px; color:#8A6D1B;">(değişirse cari kayıtlar güncellenir)</span></label>
+            <select x-model="duzForm.uretici">
+              <option value="">— Seçin —</option>
+              <template x-for="u in lookup.uretici" :key="u"><option :value="u" x-text="u"></option></template>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Konum / Depo</label>
+            <input type="text" x-model="duzForm.konum" placeholder="Örn: Depo A - Raf 12">
+          </div>
+          <div class="form-group">
+            <label>Alış Fiyatı</label>
+            <input type="number" step="0.01" x-model="duzForm.alis_fiyati">
+          </div>
+          <div class="form-group">
+            <label>Fiyat Birimi</label>
+            <select x-model="duzForm.fiyat_birim">
+              <option value="">— Seçin —</option>
+              <option value="m2">$/m²</option>
+              <option value="sqft">$/sqft</option>
+              <option value="ton">$/ton</option>
+              <option value="m3">$/m³</option>
+              <option value="adet">$/adet</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:20px;">
+          <label>Açıklama / Not</label>
+          <textarea x-model="duzForm.aciklama" rows="3" style="resize:vertical;" placeholder="Stoğa ait notlar..."></textarea>
+        </div>
+
+        <div style="background:var(--info-bg); border:1px solid #C4D2E6; color:var(--info); padding:10px 14px; border-radius:var(--radius-sm); font-size:12px; margin-bottom:16px;">
+          Durum, tedarikçi, konum, alış fiyatı ve açıklama güncellenebilir. Tedarikçi değişirse cari kayıtlar otomatik taşınır (onay istenir). Boyut/blok no gibi kimlik bilgileri değiştirilemez.
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:12px; padding-top:16px; border-top:1px solid var(--border-soft);">
+          <button type="button" class="btn btn-secondary" @click="duzModal=false">İptal</button>
+          <button type="submit" class="btn btn-primary"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Değişikliği Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       EXCEL IMPORT MODAL (EKSIKTI - EKLENDI)
+       ════════════════════════════════════════════════════ -->
+  <div class="modal-bg" x-show="importModal" x-cloak @click.self="importModal=false">
+    <div class="modal" style="width:min(900px, 95vw); max-height:90vh; overflow-y:auto">
+      <div class="modal-title">
+        <span>Excel'den Toplu Plaka Import</span>
+        <span class="modal-close" @click="importModal=false">×</span>
+      </div>
+
+      <!-- 1. Ortak Bilgiler -->
+      <div style="background:var(--bg-body); border:1px solid var(--border-soft); border-radius:var(--radius-md); padding:16px; margin-bottom:20px;">
+        <div style="font-weight:700; color:var(--primary); margin-bottom:12px; font-size:13px;">1 · Ortak Bilgiler (Tüm Plakalar İçin Geçerli)</div>
+
+        <div class="form-grid cols-3" style="margin-bottom:12px;">
+          <div class="form-group">
+            <label>Üretici *</label>
+            <select x-model="importForm.uretici" required>
+              <option value="">Seçiniz</option>
+              <template x-for="u in lookup.uretici"><option :value="u" x-text="u"></option></template>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Cins</label>
+            <select x-model="importForm.cins">
+              <option value="">Seçiniz</option>
+              <template x-for="c in lookup.cins"><option :value="c" x-text="c"></option></template>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Özellik / Yüzey</label>
+            <select x-model="importForm.ozellik">
+              <option value="">Seçiniz</option>
+              <template x-for="o in lookup.ozellik"><option :value="o" x-text="o"></option></template>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid cols-3" style="margin-bottom:12px;">
+          <div class="form-group">
+            <label>Blok No (Referans)</label>
+            <input type="text" x-model="importForm.blok_no" placeholder="Tüm plakalar bu bloka ait">
+          </div>
+          <div class="form-group">
+            <label>Başlangıç Slab No</label>
+            <input type="number" min="1" x-model="importForm.baslangic_no" placeholder="1">
+          </div>
+          <div class="form-group">
+            <label>Konum / Depo</label>
+            <input type="text" x-model="importForm.konum" placeholder="Depo A">
+          </div>
+        </div>
+
+        <div class="form-grid cols-3">
+          <div class="form-group">
+            <label>Alış Fiyatı (Birim)</label>
+            <input type="number" step="0.01" x-model="importForm.alis_fiyati" placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label>Döviz</label>
+            <select x-model="importForm.doviz">
+              <option>USD</option><option>EUR</option><option>TRY</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Açıklama</label>
+            <input type="text" x-model="importForm.aciklama">
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Excel Yükle -->
+      <div style="background:var(--info-bg); border:1px solid #C4D2E6; border-radius:var(--radius-md); padding:16px; margin-bottom:20px;">
+        <div style="font-weight:700; color:var(--info); margin-bottom:12px; font-size:13px;">2 · Excel Dosyasını Yükle</div>
+        <input type="file" accept=".xlsx,.xls,.csv" @change="dosyaSec($event)"
+               style="padding:10px; border:2px dashed var(--info); border-radius:var(--radius-sm); background:#fff; width:100%; cursor:pointer;">
+        <div x-show="importForm.dosyaAd" style="margin-top:8px; font-size:12px; color:var(--success); font-weight:600;">
+          Dosya yüklendi: <strong x-text="importForm.dosyaAd"></strong>
+          (<span x-text="importForm.satirlar.length"></span> satır)
+        </div>
+      </div>
+
+      <!-- 3. Sütun Eşleştirme -->
+      <div x-show="importForm.sutunlar.length > 0"
+           style="background:var(--warn-bg); border:1px solid #E8DCB0; border-radius:var(--radius-md); padding:16px; margin-bottom:20px;">
+        <div style="font-weight:700; color:#8A6D1B; margin-bottom:12px; font-size:13px;">3 · Sütunları Eşleştir</div>
+        <div class="form-grid cols-3">
+          <div class="form-group">
+            <label>Boy Sütunu *</label>
+            <select x-model="importForm.mapBoy">
+              <option value="">— Sütun seç —</option>
+              <template x-for="s in importForm.sutunlar" :key="s"><option :value="s" x-text="s"></option></template>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Yükseklik Sütunu *</label>
+            <select x-model="importForm.mapYuk">
+              <option value="">— Sütun seç —</option>
+              <template x-for="s in importForm.sutunlar" :key="s"><option :value="s" x-text="s"></option></template>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Kalınlık Sütunu (opsiyonel)</label>
+            <select x-model="importForm.mapKal">
+              <option value="">(yok)</option>
+              <template x-for="s in importForm.sutunlar" :key="s"><option :value="s" x-text="s"></option></template>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Önizleme -->
+      <div x-show="importForm.satirlar.length > 0"
+           style="margin-bottom:20px;">
+        <div style="font-weight:700; color:var(--primary); margin-bottom:12px; font-size:13px;">
+          4 · Veri Önizleme (İlk 5 Satır)
+        </div>
+        <div style="overflow-x:auto; border:1px solid var(--border-soft); border-radius:var(--radius-sm);">
+          <table style="width:100%; font-size:12px; border-collapse:collapse;">
+            <thead>
+              <tr style="background:var(--bg-body);">
+                <template x-for="s in importForm.sutunlar" :key="s">
+                  <th style="padding:8px 12px; text-align:left; font-weight:700; color:var(--text-muted); border-bottom:1px solid var(--border-mid); font-size:11px; text-transform:uppercase;"
+                      x-text="s"></th>
+                </template>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="(row, i) in importForm.satirlar.slice(0, 5)" :key="i">
+                <tr>
+                  <template x-for="(cell, j) in row" :key="j">
+                    <td style="padding:6px 12px; border-bottom:1px solid var(--border-soft);" x-text="cell"></td>
+                  </template>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+        <div x-show="importForm.satirlar.length > 5" style="margin-top:6px; font-size:11px; color:var(--text-muted); text-align:center;">
+          ... ve <span x-text="importForm.satirlar.length - 5"></span> satır daha
+        </div>
+      </div>
+
+      <!-- Sonuç -->
+      <div x-show="importSonuc"
+           :style="importHata ? 'background:var(--danger-bg); border:1px solid #E2C9C5; color:var(--danger);' : 'background:var(--success-bg); border:1px solid #CBD6CC; color:var(--success);'"
+           style="padding:10px 14px; border-radius:var(--radius-sm); margin-bottom:16px; font-size:13px; font-weight:600;">
+        <span x-text="importSonuc"></span>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:12px; padding-top:16px; border-top:1px solid var(--border-soft);">
+        <button class="btn btn-secondary" @click="importModal=false">İptal</button>
+        <button class="btn btn-primary" @click="topluImport()"
+                :disabled="!importForm.uretici || !importForm.mapBoy || !importForm.mapYuk || importForm.satirlar.length === 0">
+          Toplu Import Başlat
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+<script>
+function stokApp() {
+  return {
+    activeTab: 'PLAKA',
+    rows: [],
+    page: 1, per_page: 100, meta: null,
+    filtre: { cins: '', uretici: '', durum: 'aktif', arama: '' },
+    lookup: { cins: [], uretici: [], ozellik: [], durum: [] },
+    yeniModal: false,
+    yeniForm: {
+      tip:'', cins:'', uretici:'', blok_no:'',
+      boy:'', yukseklik:'', en:'', kalinlik:'',
+      hacim_m3:'', fiyat:'', fiyat_birim:'m2', doviz:'USD',
+      adet:1, baslangic_no:1, kasa_adedi:1, kasa_ici_adet:1,
+      tonaj:'', aciklama:'', fatura_no:'',
+      kdv_dahil_mi:false, kdv_oran:20,
+      matrah_onizleme:0, kdv_tutar_onizleme:0,
+      alis_tipi:'yurtici_kdvli',
+      fatura_durumu:'faturali', giris_tarihi:'', alis_tarihi:''
+    },
+    duzModal: false,
+    duzForm: { id:'', tip:'', durum:'', konum:'', alis_fiyati:'', fiyat_birim:'', aciklama:'' },
+    importModal: false,
+    importForm: {
+      uretici:'', cins:'', ozellik:'', blok_no:'', baslangic_no:1,
+      alis_fiyati:'', doviz:'USD', konum:'', aciklama:'',
+      dosyaAd:'', sutunlar:[], satirlar:[], mapBoy:'', mapYuk:'', mapKal:''
+    },
+    importSonuc: '',
+    importHata: false,
+    seciliIds: [],
+    blokSilModal: false,
+    blokSilForm: { blok_no:'', durum:'' },
+    blokNoListesi: [],
+    blokSilinecekler: [],
+    tarihceModal: false,
+    tarihceStok: {},
+    tarihceOlaylar: [],
+    tarihceLoading: false,
+
+    get tumSecili() {
+      // Filtrelenmiş satırların HEPSİ seçili mi? (filtre dışı seçimler etkilemez)
+      const fr = this.filtrelenmisRows;
+      if (fr.length === 0) return false;
+      return fr.every(r => this.seciliIds.includes(r.id));
+    },
+
+    get filtrelenmisRows() {
+      let filtered = this.rows;
+      if (this.filtre.arama) {
+        const term = this.filtre.arama.toLowerCase();
+        filtered = filtered.filter(r =>
+          String(r.id).toLowerCase().includes(term) ||
+          (r.blok_no && String(r.blok_no).toLowerCase().includes(term)) ||
+          (r.kasa_no && String(r.kasa_no).toLowerCase().includes(term)) ||
+          (r.cins && String(r.cins).toLowerCase().includes(term))
+        );
+      }
+      return filtered;
+    },
+
+    get blokSilinecekAdet() {
+      return this.blokSilinecekler.length;
+    },
+
+    async init() {
+      const [c, u, o, d] = await Promise.all([
+        fetch('/api/lookup/cins').then(r=>r.json()),
+        fetch('/api/uretici').then(r=>r.json()),
+        fetch('/api/lookup/ozellik').then(r=>r.json()),
+        fetch('/api/lookup/durum').then(r=>r.json())
+      ]);
+      this.lookup.cins = c.map(x=>x.deger);
+      this.lookup.uretici = u.map(x=>x.deger || x.unvan || x);
+      this.lookup.ozellik = o.map(x=>x.deger);
+      this.lookup.durum = d.map(x=>x.deger);
+
+      await this.listele();
+      await this.blokNoListesiniYukle();
+
+      // Varsayılan KDV oranı
+      try {
+        const kdvAyarRes = await fetch('/api/ayarlar/lookup?kategori=kdv_ayar');
+        const kdvData = await kdvAyarRes.json();
+        if (kdvData && Array.isArray(kdvData.data)) {
+          const v = kdvData.data.find(x => x.deger === 'varsayilan_oran');
+          if (v && v.kisaltma) this.yeniForm.kdv_oran = parseFloat(v.kisaltma);
+        }
+      } catch(e) {}
+    },
+
+    async listele() {
+      const p = new URLSearchParams({ tip: this.activeTab, page: this.page, per_page: this.per_page });
+      if(this.filtre.cins) p.set('cins', this.filtre.cins);
+      if(this.filtre.uretici) p.set('uretici', this.filtre.uretici);
+      if(this.filtre.durum) p.set('durum', this.filtre.durum);
+
+      try {
+        const res = await fetch('/api/stok?'+p);
+        const data = await res.json();
+        this.rows = data.data || data;
+        this.meta = data.meta || null;
+      } catch (e) {
+        console.error('Listeleme hatası:', e);
+        this.rows = [];
+      }
+      this.seciliIds = [];
+    },
+
+    async blokNoListesiniYukle() {
+      try {
+        const res = await fetch('/api/stok?tip=' + this.activeTab + '&per_page=1000');
+        const data = await res.json();
+        const items = data.data || data;
+        const benzersizBloklar = new Set();
+        items.forEach(item => {
+          let blokNo = item.blok_no || item.kasa_no;
+          if (blokNo && blokNo.trim() !== '') benzersizBloklar.add(blokNo);
+        });
+        this.blokNoListesi = Array.from(benzersizBloklar).sort();
+      } catch (e) { this.blokNoListesi = []; }
+    },
+
+    blokSilinecekleriHesapla() {
+      if (!this.blokSilForm.blok_no) { this.blokSilinecekler = []; return; }
+      this.blokSilinecekler = this.filtrelenmisRows.filter(r =>
+        r.blok_no === this.blokSilForm.blok_no || r.kasa_no === this.blokSilForm.blok_no
+      );
+      if (this.blokSilForm.durum) {
+        this.blokSilinecekler = this.blokSilinecekler.filter(r => r.durum === this.blokSilForm.durum);
+      }
+    },
+
+    async sekmeDegistir(tab) {
+      this.activeTab = tab;
+      this.seciliIds = [];
+      this.page = 1;
+      this.filtre.arama = '';
+      await this.listele();
+      await this.blokNoListesiniYukle();
+    },
+
+    sayfaSifirlaVeListele() { this.page = 1; this.listele(); },
+
+    toggleTumunuSec() {
+      const fr = this.filtrelenmisRows;
+      const frIds = fr.map(r => r.id);
+      if (this.tumSecili) {
+        // Filtrelenmiş satırların seçimini kaldır (filtre dışı seçimleri koru)
+        this.seciliIds = this.seciliIds.filter(id => !frIds.includes(id));
+      } else {
+        // Filtrelenmiş satırları seçime ekle (mükerrer olmadan)
+        frIds.forEach(id => {
+          if (!this.seciliIds.includes(id)) this.seciliIds.push(id);
+        });
+      }
+    },
+
+    async seciliSil() {
+      if(this.seciliIds.length === 0) return;
+      const onay = await Utils.confirmSil(`${this.seciliIds.length} Stok Kaydını Sil`, {
+        mesaj: `Seçili ${this.seciliIds.length} adet stok kaydı kalıcı olarak silinecek.`,
+        detail: 'Her stok için bağlı <strong>cari hareket</strong> ve <strong>maliyet</strong> kayıtları da otomatik temizlenir. Bu işlem geri alınamaz.',
+      });
+      if (!onay) return;
+
+      let silinen = 0, hata = 0;
+      for (let id of this.seciliIds) {
+        try {
+          const res = await fetch('/api/stok/' + this.activeTab + '/' + id, { method: 'DELETE' });
+          const d = await res.json();
+          if (d.ok) silinen++; else hata++;
+        } catch(e) { hata++; }
+      }
+      if (silinen > 0) Utils.success(silinen + ' adet stok silindi' + (hata > 0 ? `, ${hata} silinemedi` : ''));
+      if (hata > 0 && silinen === 0) Utils.error(hata + ' kayıt silinemedi (rezerve veya satılmış olabilir)');
+      this.seciliIds = [];
+      await this.listele();
+      await this.blokNoListesiniYukle();
+    },
+
+    blokIleSilModalAc() {
+      this.blokSilForm = { blok_no:'', durum:'' };
+      this.blokSilinecekler = [];
+      this.blokSilModal = true;
+    },
+
+    async blokIleSil() {
+      if(this.blokSilinecekler.length === 0) return;
+      const adet = this.blokSilinecekler.length;
+      if(!(await Utils.confirm(adet + ' adet ürün kalıcı silinecek. Devam?'))) return;
+
+      // Onay verildi: her iki modalı da HEMEN kapat (kullanıcı beklemede kalmasın)
+      const silinecekler = [...this.blokSilinecekler];
+      const tip = this.activeTab;
+      this.blokSilModal = false;
+      this.blokSilForm = { blok_no:'', durum:'' };
+      this.blokSilinecekler = [];
+      Utils.success(adet + ' ürün siliniyor…');
+
+      // Silme isteklerini PARALEL ama batch'ler halinde gönder
+      // (SQLite eşzamanlı yazma kilidini önlemek için 5'erli gruplar)
+      let silinen = 0;
+      const BATCH = 5;
+      for (let i = 0; i < silinecekler.length; i += BATCH) {
+        const grup = silinecekler.slice(i, i + BATCH);
+        const sonuclar = await Promise.allSettled(
+          grup.map(item =>
+            fetch('/api/stok/' + tip + '/' + item.id, { method: 'DELETE' })
+              .then(r => r.json())
+          )
+        );
+        silinen += sonuclar.filter(s => s.status === 'fulfilled' && s.value && s.value.ok).length;
+      }
+      const hatali = adet - silinen;
+
+      if (hatali > 0) {
+        Utils.error(silinen + ' silindi, ' + hatali + ' silinemedi (rezerve/satılmış olabilir)');
+      } else {
+        Utils.success(silinen + ' adet ürün silindi');
+      }
+      this.seciliIds = [];
+      await this.listele();
+      await this.blokNoListesiniYukle();
+    },
+
+    birimEtiket(b) { return {'ton':'ton','m3':'m³','m2':'m²','sqft':'sqft'}[b] || b || 'm²'; },
+
+    yeniModalAc() {
+      const bugun = new Date().toISOString().slice(0, 10);
+      this.yeniForm = {
+        tip: this.activeTab, cins: '', uretici: '', blok_no: '',
+        boy: '', yukseklik: '', en: '', kalinlik: '',
+        hacim_m3: '', fiyat: '', fiyat_birim: (this.activeTab==='BLOK'?'ton':'m2'), doviz: 'USD',
+        adet: 1, baslangic_no: 1, kasa_adedi: 1, kasa_ici_adet: 1,
+        tonaj: '', aciklama: '', fatura_no: '',
+        kdv_dahil_mi: false, kdv_oran: this.yeniForm.kdv_oran || 20,
+        matrah_onizleme: 0, kdv_tutar_onizleme: 0,
+        alis_tipi: 'yurtici_kdvli',
+        fatura_durumu: 'faturali', giris_tarihi: bugun, alis_tarihi: bugun
+      };
+      this.yeniModal = true;
+    },
+
+    alisTipiDegisti() {
+      if (this.yeniForm.alis_tipi !== 'yurtici_kdvli') {
+        this.yeniForm.kdv_oran = 0;
+        this.yeniForm.kdv_dahil_mi = false;
+      } else {
+        if (!this.yeniForm.kdv_oran || this.yeniForm.kdv_oran === 0) this.yeniForm.kdv_oran = 20;
+      }
+      this.kdvHesapla();
+    },
+
+    get faturaDurumuAciklama() {
+      const a = {
+        'faturali': 'Tedarikçiye borç hemen oluşur.',
+        'faturasiz': 'Mal stoğa girer, borç oluşmaz. Fatura gelince "Faturalandır" ile borç işlenir.',
+        'mal_bekliyor': 'Borç fatura tarihinde oluşur. Mal gelince "Mal Teslim Al" işaretlenir.'
+      };
+      return a[this.yeniForm.fatura_durumu] || '';
+    },
+
+    faturaDurumuDegisti() {
+      // Mal bekliyor: fatura tarihi zorunlu, giriş tarihi sonra. Faturasız: fatura tarihi yok.
+      const bugun = new Date().toISOString().slice(0, 10);
+      if (!this.yeniForm.giris_tarihi) this.yeniForm.giris_tarihi = bugun;
+      if (!this.yeniForm.alis_tarihi) this.yeniForm.alis_tarihi = bugun;
+    },
+
+    async faturalandirAc(r) {
+      // Faturasız stoğu faturalandır: fatura no + tarih sor, borç oluştur
+      const fatura_no = prompt('Fatura No girin:', r.fatura_no || '');
+      if (fatura_no === null) return;
+      const bugun = new Date().toISOString().slice(0, 10);
+      const alis_tarihi = prompt('Fatura / Alış tarihi (YYYY-AA-GG):', bugun);
+      if (alis_tarihi === null) return;
+      try {
+        const res = await fetch(`/api/stok/${r.tip || this.activeTab}/${r.id}/faturalandir`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fatura_no, alis_tarihi })
+        }).then(x => x.json());
+        if (res.ok) { Utils.success(res.mesaj || 'Faturalandırıldı'); await this.listele(); }
+        else Utils.error(res.mesaj || 'Hata');
+      } catch (e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async malTeslimAl(r) {
+      // Mal bekleyen stoğu teslim al: giriş tarihi sor
+      const bugun = new Date().toISOString().slice(0, 10);
+      const giris_tarihi = prompt('Mal giriş (teslim) tarihi (YYYY-AA-GG):', bugun);
+      if (giris_tarihi === null) return;
+      try {
+        const res = await fetch(`/api/stok/${r.tip || this.activeTab}/${r.id}/mal_teslim`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ giris_tarihi })
+        }).then(x => x.json());
+        if (res.ok) { Utils.success(res.mesaj || 'Mal teslim alındı'); await this.listele(); }
+        else Utils.error(res.mesaj || 'Hata');
+      } catch (e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    kdvHesapla() {
+      let fiyat = parseFloat(this.yeniForm.fiyat) || 0;
+      let miktar = 0;
+      if (this.activeTab === 'BLOK') {
+        miktar = this.yeniForm.fiyat_birim === 'ton'
+          ? (parseFloat(this.yeniForm.tonaj) || 0)
+          : (parseFloat(this.yeniForm.hacim_m3) || 0);
+      } else if (this.activeTab === 'PLAKA') {
+        let boy = parseFloat(this.yeniForm.boy) || 0;
+        let yuk = parseFloat(this.yeniForm.yukseklik) || 0;
+        let m2 = (boy * yuk) / 10000;
+        miktar = this.yeniForm.fiyat_birim === 'm2' ? m2 : (m2 * 10.7639);
+      } else {
+        let boy = parseFloat(this.yeniForm.boy) || 0;
+        let yuk = parseFloat(this.yeniForm.yukseklik) || 0;
+        let ic_adet = parseInt(this.yeniForm.kasa_ici_adet) || 1;
+        let m2_kasa = (boy * yuk) / 10000 * ic_adet;
+        miktar = this.yeniForm.fiyat_birim === 'm2' ? m2_kasa : (m2_kasa * 10.7639);
+      }
+      let oran = parseFloat(this.yeniForm.kdv_oran) || 0;
+      if (this.yeniForm.kdv_dahil_mi && oran > 0) {
+        let matrah = fiyat / (1 + oran/100);
+        this.yeniForm.matrah_onizleme = matrah * miktar;
+        this.yeniForm.kdv_tutar_onizleme = (fiyat - matrah) * miktar;
+      } else {
+        this.yeniForm.matrah_onizleme = fiyat * miktar;
+        this.yeniForm.kdv_tutar_onizleme = fiyat * miktar * (oran/100);
+      }
+    },
+
+    boyYukseklikDegisti() {
+      if (this.activeTab == 'BLOK') {
+        const b = parseFloat(this.yeniForm.boy) || 0;
+        const y = parseFloat(this.yeniForm.yukseklik) || 0;
+        const e = parseFloat(this.yeniForm.en) || 0;
+        this.yeniForm.hacim_m3 = Utils.q3((b * y * e) / 1000000);
+      }
+      this.kdvHesapla();
+    },
+
+    async yeniKaydet() {
+      this.yeniForm.tip = this.activeTab;
+      try {
+        const res = await fetch('/api/stok/ekle', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.yeniForm)
+        });
+        const d = await res.json();
+        if (d.ok) {
+          this.yeniModal = false;
+          await this.listele();
+          await this.blokNoListesiniYukle();
+          Utils.success('Stok başarıyla eklendi');
+        } else { Utils.error(d.mesaj); }
+      } catch (e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    duzenleAc(r) {
+      this.duzForm = {
+        id: r.id, tip: r.tip || this.activeTab, durum: r.durum,
+        konum: r.konum || '',
+        uretici: r.uretici || '',
+        alis_fiyati: r.fiyat || '', fiyat_birim: r.fiyat_birim || '',
+        aciklama: r.aciklama || ''
+      };
+      this._duzOrijinal = { uretici: r.uretici || '', durum: r.durum, cins: r.cins || '', blok_no: r.blok_no || r.slab_no || r.kasa_no || '' };
+      this.duzModal = true;
+    },
+
+    async duzKaydet() {
+      // Tedarikçi değiştiyse onay al (cari kayıtlar etkilenecek)
+      const eskiTedarikci = (this._duzOrijinal || {}).uretici || '';
+      const yeniTedarikci = this.duzForm.uretici || '';
+      if (yeniTedarikci && yeniTedarikci !== eskiTedarikci) {
+        const durum = (this._duzOrijinal || {}).durum || '';
+        let mesaj =
+          `Tedarikçi "${eskiTedarikci || '(boş)'}" → "${yeniTedarikci}" olarak değiştirilecek. ` +
+          `Eski tedarikçinin cari hesabından bu stoğun alış faturası tutarı düşülecek, ` +
+          `yeni tedarikçinin hesabına aynı tutar alacak olarak eklenecek. ` +
+          `Bu stoğa bağlı nakliye/gider faturaları da yeni tedarikçiye taşınacak.`;
+        if (['Satildi', 'Sevkedildi', 'Tükendi', 'Tukendi', 'Rezerve'].includes(durum)) {
+          mesaj += ` ⚠️ DİKKAT: Bu stok "${durum}" durumunda, geçmiş kayıtlar etkilenebilir.`;
+        }
+        const onay = await Utils.confirm(mesaj, {
+          title: 'Tedarikçi Değişikliğini Onayla',
+          okText: 'Evet, Değiştir',
+          danger: true,
+        });
+        if (!onay) return;
+      }
+
+      try {
+        const res = await fetch('/api/stok/' + this.duzForm.id, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.duzForm)
+        });
+        const d = await res.json();
+        if (d.ok) {
+          this.duzModal = false;
+          await this.listele();
+          Utils.success(d.mesaj || 'Stok güncellendi');
+        } else { Utils.error(d.mesaj); }
+      } catch (e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async stokSil(id) {
+      const row = this.rows.find(r => r.id === id) || {};
+      const onay = await Utils.confirmSil('Stok Kaydını Sil', {
+        mesaj: `"${row.cins || id}" — ${row.blok_no || ''} bu stok kaydını silmek istediğinize emin misiniz?`,
+        detail: 'Stok silindiğinde bağlı <strong>cari hareket</strong> ve <strong>maliyet</strong> kayıtları da otomatik temizlenir.',
+        onEdit: () => this.duzenleAc(row),
+      });
+      if (!onay) return;
+      try {
+        const res = await fetch('/api/stok/' + this.activeTab + '/' + id, { method: 'DELETE' });
+        const d = await res.json();
+        if (d.ok) {
+          await this.listele();
+          await this.blokNoListesiniYukle();
+          Utils.success(d.mesaj || 'Stok silindi');
+        } else { Utils.error(d.mesaj); }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async tarihceAc(r) {
+      this.tarihceOlaylar = [];
+      this.tarihceStok = r;
+      this.tarihceModal = true;
+      this.tarihceLoading = true;
+      try {
+        const res = await fetch('/api/stok/' + r.id + '/gecmis');
+        const data = await res.json();
+        if(res.ok && data.ok) {
+          this.tarihceOlaylar = data.olaylar || [];
+        } else {
+          Utils.error(data.mesaj || 'Tarihçe alınamadı');
+          this.tarihceModal = false;
+        }
+      } catch(e) {
+        Utils.error('Ağ hatası: ' + e.message);
+        this.tarihceModal = false;
+      } finally {
+        this.tarihceLoading = false;
+      }
+    },
+
+    olayDotStil(renk) {
+      if(renk === 'success') return 'border-color: var(--success); background: var(--success);';
+      if(renk === 'danger') return 'border-color: var(--danger); background: var(--danger);';
+      if(renk === 'info') return 'border-color: var(--info); background: var(--info);';
+      if(renk === 'warning') return 'border-color: var(--warn); background: var(--warn);';
+      return 'border-color: var(--border-mid); background: var(--border-mid);';
+    },
+    olayBorderStil(renk) {
+      if(renk === 'success') return 'var(--success)';
+      if(renk === 'danger') return 'var(--danger)';
+      if(renk === 'info') return 'var(--info)';
+      if(renk === 'warning') return 'var(--warn)';
+      return 'var(--border-mid)';
+    },
+
+    importModalAc() {
+      this.importForm = {
+        uretici: '', cins: '', ozellik: '', blok_no: '', baslangic_no: 1,
+        alis_fiyati: '', doviz: 'USD', konum: '', aciklama: '',
+        dosyaAd: '', sutunlar: [], satirlar: [], mapBoy: '', mapYuk: '', mapKal: ''
+      };
+      this.importSonuc = '';
+      this.importHata = false;
+      this.importModal = true;
+    },
+
+    dosyaSec(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      this.importForm.dosyaAd = file.name;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+        if (!rows || rows.length === 0) return;
+        this.importForm.sutunlar = rows[0].map(h => String(h).trim());
+        this.importForm.satirlar = rows.slice(1)
+          .filter(r => r.length > 0 && r.some(c => c !== ''))
+          .map(r => {
+            let rowData = [];
+            for (let i = 0; i < this.importForm.sutunlar.length; i++) {
+              rowData.push(String(r[i] || '').trim());
+            }
+            return rowData;
+          });
+      };
+      reader.readAsArrayBuffer(file);
+    },
+
+    async topluImport() {
+      if (!this.importForm.uretici) { this.importSonuc = "Üretici seçiniz"; this.importHata = true; return; }
+      if (!this.importForm.mapBoy || !this.importForm.mapYuk) {
+        this.importSonuc = "Boy ve Yükseklik sütunlarını eşleştirin";
+        this.importHata = true; return;
+      }
+
+      const boyIdx = this.importForm.sutunlar.indexOf(this.importForm.mapBoy);
+      const yukIdx = this.importForm.sutunlar.indexOf(this.importForm.mapYuk);
+      const kalIdx = this.importForm.mapKal ? this.importForm.sutunlar.indexOf(this.importForm.mapKal) : -1;
+
+      let plakalar = [];
+      let sayac = parseInt(this.importForm.baslangic_no) || 1;
+
+      for (let row of this.importForm.satirlar) {
+        let boy = parseFloat(row[boyIdx]) || 0;
+        let yuk = parseFloat(row[yukIdx]) || 0;
+        if (boy <= 0 || yuk <= 0) continue;
+        let kal = (kalIdx >= 0 && row[kalIdx]) ? (parseFloat(row[kalIdx]) || null) : null;
+
+        plakalar.push({
+          uretici: this.importForm.uretici,
+          cins: this.importForm.cins || '',
+          ozellik: this.importForm.ozellik || '',
+          blok_no: this.importForm.blok_no || '',
+          slab_no: sayac.toString(),
+          boy, yukseklik: yuk, kalinlik: kal,
+          alis_fiyati: parseFloat(this.importForm.alis_fiyati) || 0,
+          doviz: this.importForm.doviz || 'USD',
+          konum: this.importForm.konum || '',
+          aciklama: this.importForm.aciklama || '',
+          durum: 'Serbest'
+        });
+        sayac++;
+      }
+
+      if (!plakalar.length) { this.importSonuc = "Geçerli veri satırı bulunamadı"; this.importHata = true; return; }
+
+      try {
+        const res = await fetch('/api/stok/toplu_import', {
+          method: 'POST', headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ plakalar })
+        });
+        const d = await res.json();
+        if (d.ok) {
+          this.importSonuc = d.eklenen + " plaka başarıyla stoğa eklendi";
+          this.importHata = false;
+          setTimeout(() => { this.importModal = false; }, 2000);
+          await this.listele();
+          await this.blokNoListesiniYukle();
+        } else {
+          this.importSonuc = d.mesaj || "Hata oluştu";
+          this.importHata = true;
+        }
+      } catch (err) {
+        this.importSonuc = "Sunucu bağlantı hatası";
+        this.importHata = true;
+      }
+    }
+  };
+}
+</script>
+{% endblock %}

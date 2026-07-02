@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ baslik }} - {{ cari.unvan }}</title>
+  <style>
+    :root {
+      --text-main: #232824;
+      --border: #bdc3c7;
+      --danger: #A94438;
+      --success: #4A5D4E;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--text-main);
+      font-size: 12px;
+      line-height: 1.4;
+      background: #fff;
+      margin: 0;
+      padding: 30px;
+    }
+    
+    /* YAZDIRMA (PDF) AYARLARI */
+    @media print {
+      body { padding: 0; }
+      .no-print { display: none !important; }
+      .page-break { page-break-before: always; }
+      table { page-break-inside: auto; }
+      tr { page-break-inside: avoid; page-break-after: auto; }
+      thead { display: table-header-group; }
+      tfoot { display: table-footer-group; }
+      /* Renklerin PDF'e geçmesi için zorlama */
+      .text-danger { color: #A94438 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .text-success { color: #4A5D4E !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      th { background-color: #f2f2f2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+
+    /* Üst Bilgi (Header) */
+    .header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: flex-start; 
+      border-bottom: 2px solid #C05A36; 
+      padding-bottom: 10px; 
+      margin-bottom: 20px; 
+    }
+    .firma-info h1 { margin: 0 0 5px 0; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-main); }
+    .firma-info p { margin: 0; color: #555; }
+    .belge-info { text-align: right; }
+    .belge-info h2 { margin: 0 0 5px 0; font-size: 18px; color: var(--text-main); }
+    .belge-info p { margin: 0; color: #555; font-weight: 600; }
+    
+    /* Cari ve Özet Kutuları */
+    .info-grid { display: flex; justify-content: space-between; margin-bottom: 20px; gap: 20px; }
+    .info-box { flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 12px; }
+    .info-box h3 { margin: 0 0 10px 0; font-size: 14px; border-bottom: 1px solid #eee; padding-bottom: 5px; color: #4A5D4E;}
+    .info-row { display: flex; justify-content: flex-start; margin-bottom: 5px; }
+    .info-label { font-weight: bold; color: #555; width: 100px; }
+    .info-value { flex: 1; font-weight: 600;}
+    
+    /* Bakiye Özeti */
+    .ozet-box { flex: 0 0 280px; background-color: #FAF7F2; border: 1px solid var(--border); border-radius: 6px; padding: 12px; }
+    .ozet-box h3 { margin: 0 0 10px 0; font-size: 14px; border-bottom: 1px solid #e0e0e0; padding-bottom: 5px; text-align:center; color: #4A5D4E;}
+    .ozet-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size:13px; font-weight:bold; }
+    
+    /* Tablo Tasarımı (Kompakt ve Şık) */
+    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 11px; }
+    th, td { padding: 6px 8px; border: 1px solid var(--border); text-align: left; }
+    th { background-color: #f2f2f2; font-weight: bold; text-transform: uppercase; color: #333; }
+    td.num { text-align: right; font-weight: bold; }
+    
+    /* Tarayıcıda Gösterilecek Yazdır Butonu */
+    .print-btn { 
+      padding: 10px 20px; background-color: #232824; color: #fff; text-decoration: none; 
+      border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: bold; 
+      position: fixed; bottom: 20px; right: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+    }
+    .print-btn:hover { background-color: #232824; }
+    
+    .text-danger { color: var(--danger); }
+    .text-success { color: var(--success); }
+  </style>
+</head>
+<body>
+
+<!-- Bu buton sadece ekranda görünür, PDF'e veya kağıda basılmaz -->
+<button class="print-btn no-print" onclick="window.print()"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:6px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Sayfayı Yazdır / PDF Olarak Kaydet</button>
+
+<!-- ÜST BİLGİ (Firma ve Belge Tipi) -->
+<div class="header">
+  <div class="firma-info">
+    <h1>{{ firma_adi }}</h1>
+    <p>{{ firma_adres }}</p>
+  </div>
+  <div class="belge-info">
+    <h2>{{ baslik }}</h2>
+    <p>Belge Tarihi: {{ bugun.strftime('%d.%m.%Y') }}</p>
+  </div>
+</div>
+
+<!-- CARİ DETAYLARI VE BAKİYE ÖZETİ -->
+<div class="info-grid">
+  <div class="info-box">
+    <h3>{{ _ceviri('musteri_bilgileri', dil) }}</h3>
+    <div class="info-row"><span class="info-label">Unvan:</span> <span class="info-value">{{ cari.unvan }}</span></div>
+    <div class="info-row"><span class="info-label">Yetkili:</span> <span class="info-value">{{ cari.yetkili or '-' }}</span></div>
+    <div class="info-row"><span class="info-label">Telefon:</span> <span class="info-value">{{ cari.telefon or '-' }}</span></div>
+    <div class="info-row"><span class="info-label">Para Birimi:</span> <span class="info-value">{{ cari.para_birimi }}</span></div>
+    <div class="info-row"><span class="info-label">Adres:</span> <span class="info-value" style="font-weight:normal;">{{ cari.adres or '-' }}</span></div>
+  </div>
+  
+  <div class="ozet-box">
+    <h3>{{ _ceviri('net_ozet', dil) }}</h3>
+    <div class="ozet-row"><span>{{ _ceviri('toplam_borc', dil) }}:</span> <span class="text-danger">{{ "%.2f"|format(toplam_borc) }} {{ hedef_doviz or cari.para_birimi or 'TRY' }}</span></div>
+    <div class="ozet-row"><span>{{ _ceviri('toplam_alacak', dil) }}:</span> <span class="text-success">{{ "%.2f"|format(toplam_alacak) }} {{ hedef_doviz or cari.para_birimi or 'TRY' }}</span></div>
+    <div class="ozet-row" style="border-top:2px solid #ccc; padding-top:8px; margin-top:8px; font-size:14px;">
+      <span>GÜNCEL BAKİYE:</span> 
+      <!-- Bakiye pozitifse Alacaklıyız (Müşteri borçlu - Kırmızı B), negatifse Borçluyuz (Biz borçluyuz - Yeşil A) -->
+      <span class="{{ 'text-success' if net_bakiye <= 0 else 'text-danger' }}">
+        {{ "%.2f"|format(net_bakiye|abs) }} {{ hedef_doviz or cari.para_birimi or 'TRY' }}
+        {% if net_bakiye > 0 %} {{ '(B)' if dil=='TR' else '(Dr)' }} {% elif net_bakiye < 0 %} {{ '(A)' if dil=='TR' else '(Cr)' }} {% else %} - {% endif %}
+      </span>
+    </div>
+    <div style="font-size:10px; color:#777; text-align:center; margin-top:5px; font-weight:normal;">
+      *(B): Müşteri Borçlu / Biz Alacaklıyız<br>
+      *(A): Müşteri Alacaklı / Biz Borçluyuz
+    </div>
+  </div>
+</div>
+
+<!-- HAREKETLER TABLOSU -->
+<table>
+  <thead>
+    <tr>
+      <th style="width: 75px;">{{ _ceviri('tarih', dil) }}</th>
+      <th style="width: 90px;">{{ _ceviri('islem_tipi', dil) }}</th>
+      <th style="width: 90px;">{{ _ceviri('evrak_no', dil) }}</th>
+      <th>{{ _ceviri('aciklama', dil) }}</th>
+      <th class="num" style="width: 90px;">{{ _ceviri('borc', dil) }}</th>
+      <th class="num" style="width: 90px;">{{ _ceviri('alacak', dil) }}</th>
+      <th style="width: 50px;">{{ _ceviri('doviz', dil) }}</th>
+      <th class="num" style="width: 100px;">{{ _ceviri('kumulatif_bakiye', dil) }}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for h in hareketler %}
+    <tr>
+      <td>{{ h.tarih }}</td>
+      <td style="font-weight:600;">{{ _deger_cevir('islem', h.islem_tip, dil) }}</td>
+      <td>{{ h.evrak_no or '-' }}</td>
+      <td>{{ _aciklama_cevir(h.aciklama, dil) or '-' }} {% if h.siparis_id %}<br><span style="font-size:10px; color:#555;">({{ 'Sip' if dil=='TR' else 'Order' }}: {{ h.siparis_id }})</span>{% endif %}</td>
+      <td class="num text-danger">{{ "%.2f"|format(h.borc) if h.borc else '-' }}</td>
+      <td class="num text-success">{{ "%.2f"|format(h.alacak) if h.alacak else '-' }}</td>
+      <td style="text-align:center; font-weight:600;">{{ h.doviz }}</td>
+      <td class="num">{{ "%.2f"|format(h.bakiye) }}</td>
+    </tr>
+    {% else %}
+    <tr>
+      <td colspan="8" style="text-align: center; padding: 20px;">Bu cariye ait henüz bir finansal hareket bulunmamaktadır.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<!-- İMZA ALANI -->
+<div style="margin-top: 60px; display: flex; justify-content: space-between; padding: 0 40px;">
+  <div style="width: 250px; text-align: center;">
+    <p style="border-bottom: 1px solid #000; padding-bottom: 50px; margin-bottom: 5px; font-weight:bold;">{{ _ceviri('musteri_onayi', dil) }}</p>
+    <p style="font-size: 11px; color: #555;">{{ _ceviri('kase_imza', dil) }}</p>
+  </div>
+  <div style="width: 250px; text-align: center;">
+    <p style="border-bottom: 1px solid #000; padding-bottom: 50px; margin-bottom: 5px; font-weight:bold;">{{ firma_adi }}</p>
+    <p style="font-size: 11px; color: #555;">{{ _ceviri('yetkili_imza', dil) }}</p>
+  </div>
+</div>
+
+</body>
+</html>

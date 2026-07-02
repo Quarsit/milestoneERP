@@ -1,0 +1,914 @@
+{% extends "base.html" %}
+{% block title %}Faturalar{% endblock %}
+{% block header_title %}Fatura Yönetimi{% endblock %}
+{% block content %}
+<style>
+  /* ─── Üst filtre barı ─── */
+  .ftr-filter-bar {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    margin-bottom: 24px;
+    background: var(--bg-surface); padding: 20px;
+    border-radius: var(--radius-md); border: 1px solid var(--border-soft);
+    align-items: flex-end; box-shadow: var(--shadow-blur);
+  }
+  .ftr-filter-bar .form-group { min-width: 150px; margin: 0; }
+  .ftr-filter-bar label {
+    font-size: 11px; font-weight: 700; color: var(--text-light);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 6px; display: block;
+  }
+  .ftr-filter-bar select, .ftr-filter-bar input {
+    padding: 10px 14px; border: 1px solid var(--border-mid);
+    border-radius: var(--radius-sm); font-size: 13px;
+    background: var(--bg-surface); color: var(--text-main); outline: none;
+    width: 100%;
+  }
+
+  /* ─── Fatura kart ─── */
+  .ftr-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 18px;
+  }
+  .ftr-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md);
+    padding: 18px;
+    box-shadow: var(--shadow-blur);
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  .ftr-card:hover {
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-2px);
+  }
+  .ftr-card::before {
+    content: ''; position: absolute;
+    left: 0; top: 0; bottom: 0; width: 4px;
+  }
+  .ftr-card.taslak::before { background: var(--warn); }
+  .ftr-card.kesildi::before { background: var(--info); }
+  .ftr-card.kismi-tahsil::before { background: var(--accent); }
+  .ftr-card.tahsil-edildi::before { background: var(--success); }
+  .ftr-card.iptal::before { background: var(--danger); }
+
+  .ftr-head {
+    display: flex; justify-content: space-between;
+    align-items: flex-start; margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--border-soft);
+  }
+  .ftr-id-grup { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .ftr-id {
+    font-family: monospace; font-size: 11px; font-weight: 700;
+    color: var(--accent); background: var(--accent-light);
+    padding: 3px 8px; border-radius: 6px;
+  }
+  .ftr-yon-rozet {
+    padding: 2px 8px; border-radius: 10px;
+    font-size: 9px; font-weight: 700;
+  }
+  .ftr-yon-rozet.satis { background: var(--success-bg); color: var(--success); }
+  .ftr-yon-rozet.alis { background: var(--warn-bg); color: #8A6D1B; }
+
+  .ftr-durum-select {
+    padding: 4px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 700;
+    border: 1px solid var(--border-mid); cursor: pointer;
+    background: var(--bg-surface);
+  }
+  .ftr-durum-select.durum-taslak { background: var(--warn-bg); color: #8A6D1B; }
+  .ftr-durum-select.durum-kesildi { background: var(--info-bg); color: var(--info); }
+  .ftr-durum-select.durum-kismi-tahsil { background: var(--warn-bg); color: #8A6D1B; }
+  .ftr-durum-select.durum-tahsil-edildi { background: var(--success-bg); color: var(--success); }
+  .ftr-durum-select.durum-iptal { background: var(--danger-bg); color: var(--danger); }
+
+  .ftr-musteri { font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; }
+  .ftr-no {
+    font-size: 12px; color: var(--text-muted);
+    margin-bottom: 10px; font-family: monospace;
+  }
+  .ftr-body {
+    background: var(--bg-body);
+    padding: 10px 12px; border-radius: var(--radius-sm);
+    margin-bottom: 10px; font-size: 12px;
+  }
+  .ftr-body-row {
+    display: flex; justify-content: space-between;
+    padding: 2px 0;
+  }
+  .ftr-body-row .label { color: var(--text-muted); font-weight: 600; }
+  .ftr-body-row .value { font-weight: 600; color: var(--text-main); }
+  .ftr-tutar {
+    color: var(--success); font-weight: 700;
+    font-size: 14px; font-family: monospace;
+  }
+  .ftr-tipi-row {
+    display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px;
+  }
+  .ftr-tipi-rozet {
+    padding: 2px 6px; border-radius: 6px;
+    font-size: 9px; font-weight: 700;
+  }
+  .ftr-tipi-rozet.stoklu { background: var(--info-bg); color: var(--info); }
+  .ftr-tipi-rozet.transit { background: var(--warn-bg); color: #8A6D1B; }
+  .ftr-tipi-rozet.teklif { background: var(--success-bg); color: var(--success); }
+  .ftr-tipi-rozet.kdvli { background: var(--warn-bg); color: #8A6D1B; }
+  .ftr-tipi-rozet.kdvsiz { background: var(--border-soft); color: var(--text-muted); }
+  .ftr-tipi-rozet.ihrkay { background: var(--accent-light); color: var(--accent); }
+
+  .ftr-actions {
+    display: flex; gap: 4px; flex-wrap: wrap;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-soft);
+  }
+  .ftr-btn {
+    padding: 5px 10px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border-mid); background: var(--bg-surface);
+    cursor: pointer; font-size: 12px; font-weight: 600;
+    transition: all 0.2s ease; color: var(--text-main);
+    font-family: inherit;
+  }
+  .ftr-btn:hover { background: var(--border-soft); }
+  .ftr-btn.tahsilat { background: var(--success); color: #fff; border-color: var(--success); }
+  .ftr-btn.tahsilat:hover { opacity: 0.9; }
+  .ftr-btn.danger:hover { background: var(--danger); color: #fff; border-color: var(--danger); }
+  .ftr-btn svg { width: 14px; height: 14px; stroke-width: 1.8; vertical-align: -2px; }
+
+  /* ─── Tahsilat özet kartları ─── */
+  .tah-ozet-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 8px; margin-bottom: 16px;
+  }
+  .tah-ozet-kart {
+    background: var(--bg-body); border-radius: var(--radius-sm);
+    padding: 12px; text-align: center;
+    border: 1px solid var(--border-soft);
+  }
+  .tah-ozet-kart.alacak { background: var(--success-bg); border-color: #CBD6CC; }
+  .tah-ozet-kart.kalan { background: var(--warn-bg); border-color: #E8DCB0; }
+  .tah-ozet-label {
+    font-size: 10px; color: var(--text-muted);
+    text-transform: uppercase; font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .tah-ozet-deger {
+    font-size: 16px; font-weight: 800; margin-top: 4px;
+    font-family: monospace;
+  }
+
+  /* ─── Tarih buton ─── */
+  .tarih-btn {
+    padding: 3px 8px; font-size: 11px;
+    background: var(--bg-body); color: var(--accent);
+    border: 1px solid var(--border-mid);
+    border-radius: 4px; cursor: pointer;
+    font-weight: 600; font-family: inherit;
+    transition: all 0.2s ease;
+  }
+  .tarih-btn:hover { background: var(--accent); color: #fff; }
+  .tarih-btn.uzun { background: var(--warn-bg); color: #8A6D1B; border-color: #E8DCB0; }
+  .tarih-btn.bugun { background: var(--border-soft); color: var(--text-main); border-color: var(--border-mid); }
+
+  /* ─── Empty state ─── */
+  .empty-block {
+    text-align: center; padding: 60px 20px;
+    background: var(--bg-surface);
+    border: 1px dashed var(--border-mid);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    grid-column: 1/-1;
+  }
+
+  /* ─── Modal yardımcılar ─── */
+  .label-sm {
+    font-size: 11px; font-weight: 700;
+    color: var(--text-light); text-transform: uppercase;
+    margin-bottom: 4px; display: block;
+  }
+  .bilgi-kutu {
+    background: var(--info-bg); border: 1px solid #C4D2E6;
+    color: var(--info); border-radius: var(--radius-sm);
+    padding: 10px 14px; font-size: 12px;
+  }
+  .btn-row {
+    display: flex; gap: 10px; flex-wrap: wrap;
+  }
+  .mt-md { margin-top: 16px; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+</style>
+
+<div x-data="faturaApp()" x-init="init()">
+
+  <!-- Filtre Bar -->
+  <div class="ftr-filter-bar">
+    <div class="form-group" style="min-width:160px">
+      <label>Müşteri</label>
+      <select x-model="filtre.musteri" @change="listele()">
+        <option value="">Tümü</option>
+        <template x-for="m in musteriler" :key="m"><option :value="m" x-text="m"></option></template>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Yön</label>
+      <select x-model="filtre.yon" @change="listele()">
+        <option value="">Tümü</option>
+        <option value="satis">Satış</option>
+        <option value="alis">Alış</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Durum</label>
+      <select x-model="filtre.durum" @change="listele()">
+        <option value="">Tümü</option>
+        <option value="Taslak">Taslak</option>
+        <option value="Kesildi">Kesildi</option>
+        <option value="Kismi Tahsil">Kısmi Tahsil</option>
+        <option value="Tahsil Edildi">Tahsil Edildi</option>
+        <option value="Iptal">İptal</option>
+      </select>
+    </div>
+    <div class="ftr-item" style="display:flex; align-items:flex-end;">
+      <button @click="filtre.acik = !filtre.acik; listele()"
+              :style="filtre.acik ? 'background:#fef3c7; border-color:#fbbf24; color:#92400e;' : 'background:var(--bg-surface); border-color:var(--border-mid); color:var(--text-muted);'"
+              style="padding:8px 14px; border-radius:8px; border:1px solid; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;"
+              title="Sadece tahsilat/ödeme bekleyen (Kesildi veya Kısmi) faturalar">
+        <span x-text="filtre.acik ? 'Sadece Açık ✓' : 'Sadece Açık'"></span>
+      </button>
+    </div>
+    <span style="margin-left:auto; font-size:12px; color:var(--text-muted); align-self:center;" x-text="rows.length + ' fatura'"></span>
+    <button class="btn btn-secondary btn-sm" style="margin-left:12px;" @click="window.open('/api/export/fatura?format=xlsx','_blank')" title="Excel'e aktar">📊 Excel</button>
+    <button class="btn btn-secondary btn-sm" @click="window.open('/api/export/fatura?format=pdf','_blank')" title="PDF'e aktar">📄 PDF</button>
+  </div>
+
+  <!-- Fatura kart ızgarası -->
+  <div class="ftr-grid">
+    <template x-for="f in rows" :key="f.id">
+      <div class="ftr-card" :class="{
+             'taslak': f.durum === 'Taslak',
+             'kesildi': f.durum === 'Kesildi',
+             'kismi-tahsil': f.durum === 'Kismi Tahsil',
+             'tahsil-edildi': f.durum === 'Tahsil Edildi',
+             'iptal': f.durum === 'Iptal'
+           }">
+        <div class="ftr-head">
+          <div class="ftr-id-grup">
+            <span class="ftr-id" x-text="f.id"></span>
+            <span x-show="(f.yon || 'satis') === 'satis'" class="ftr-yon-rozet satis">SATIŞ</span>
+            <span x-show="f.yon === 'alis'" class="ftr-yon-rozet alis">ALIŞ</span>
+          </div>
+          <select class="ftr-durum-select" :class="'durum-' + f.durum.replace(/ /g,'-').toLowerCase()"
+                  x-model="f.durum" @change="durumGuncelle(f, $event)">
+            <option value="Taslak">Taslak</option>
+            <option value="Kesildi">Kesildi</option>
+            <option value="Kismi Tahsil">Kısmi</option>
+            <option value="Tahsil Edildi">Tahsil</option>
+            <option value="Iptal">İptal</option>
+          </select>
+        </div>
+
+        <div class="ftr-musteri" x-text="f.musteri"></div>
+        <div class="ftr-no" x-show="f.fatura_no" x-text="f.fatura_no"></div>
+        <div class="ftr-no" x-show="!f.fatura_no" style="color:var(--text-light); font-style:italic;">Fatura no bekleniyor</div>
+
+        <!-- Tip rozetleri -->
+        <div class="ftr-tipi-row">
+          <span x-show="(f.fatura_tipi || 'stoklu') === 'stoklu'" class="ftr-tipi-rozet stoklu" title="Stoktan satış">STOKLU</span>
+          <span x-show="f.fatura_tipi === 'transit'" class="ftr-tipi-rozet transit" title="Dış alım">TRANSİT</span>
+          <span x-show="f.fatura_tipi === 'teklif'" class="ftr-tipi-rozet teklif" title="Teklif">TEKLİF</span>
+          <span x-show="f.satis_tipi === 'yurtici_kdvli'" class="ftr-tipi-rozet kdvli">KDV'Lİ</span>
+          <span x-show="f.satis_tipi === 'yurtici_kdvsiz'" class="ftr-tipi-rozet kdvsiz">KDV'SİZ</span>
+          <span x-show="f.satis_tipi === 'ihrac_kayitli'" class="ftr-tipi-rozet ihrkay">İHR.KAY.</span>
+        </div>
+
+        <div class="ftr-body">
+          <div class="ftr-body-row">
+            <span class="label">Fatura Tarihi:</span>
+            <span class="value" x-text="fmtTarih(f.fatura_tarihi)"></span>
+          </div>
+          <div class="ftr-body-row">
+            <span class="label">Vade:</span>
+            <span class="value" x-text="fmtTarih(f.vade_tarihi)"></span>
+          </div>
+          <div class="ftr-body-row">
+            <span class="label">Tutar:</span>
+            <span class="ftr-tutar" x-text="fmt(f.toplam) + ' ' + f.doviz"></span>
+          </div>
+          <div class="ftr-body-row" x-show="f.siparis_id">
+            <span class="label">Sipariş:</span>
+            <span class="value" style="font-family:monospace; color:var(--info);" x-text="f.siparis_id"></span>
+          </div>
+          <div class="ftr-body-row" x-show="f.proforma_id">
+            <span class="label">Proforma:</span>
+            <span class="value" style="font-family:monospace; font-size:11px;" x-text="f.proforma_id"></span>
+          </div>
+        </div>
+
+        <div class="ftr-actions">
+          <button class="ftr-btn tahsilat" @click="tahsilatAc(f)" x-show="f.durum === 'Kesildi' || f.durum === 'Kismi Tahsil'" title="Tahsilat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> Tahsilat</button>
+          <button class="ftr-btn" @click="duzenleAc(f)" title="Düzenle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
+          <button class="ftr-btn danger" @click="faturaSil(f)" title="Sil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+        </div>
+      </div>
+    </template>
+
+    <div class="empty-block" x-show="rows.length === 0">
+      Henüz fatura yok. Proforma modülünden <strong>"Fatura"</strong> butonuyla oluşturabilirsiniz.
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       TAHSİLAT MODAL
+       ════════════════════════════════════════════════════ -->
+  <div class="modal-bg" x-show="tahModal" x-cloak @click.self="tahModal=false">
+    <div class="modal" style="width:min(560px, 95vw)">
+      <div class="modal-title">
+        Tahsilat — <span x-text="tahFatura.id" style="color:var(--accent); font-family:monospace;"></span>
+        <span class="modal-close" @click="tahModal=false">×</span>
+      </div>
+
+      <div class="tah-ozet-grid">
+        <div class="tah-ozet-kart">
+          <div class="tah-ozet-label">Fatura Tutarı</div>
+          <div class="tah-ozet-deger" x-text="fmt(tahOzet.fatura_toplam) + ' ' + tahOzet.doviz"></div>
+        </div>
+        <div class="tah-ozet-kart alacak">
+          <div class="tah-ozet-label" style="color:#065f46;">Tahsil Edilen</div>
+          <div class="tah-ozet-deger" style="color:var(--success);" x-text="fmt(tahOzet.tahsil_edilen) + ' ' + tahOzet.doviz"></div>
+        </div>
+        <div class="tah-ozet-kart kalan">
+          <div class="tah-ozet-label" style="color:#92400e;">Kalan</div>
+          <div class="tah-ozet-deger" style="color:#b45309;" x-text="fmt(tahOzet.kalan) + ' ' + tahOzet.doviz"></div>
+        </div>
+      </div>
+
+      <!-- Yeni tahsilat -->
+      <div x-show="tahOzet.kalan > 0.01" style="border:1px solid var(--border-soft); border-radius:var(--radius-md); padding:16px; margin-bottom:16px;">
+        <div style="font-weight:700; margin-bottom:10px; font-size:13px; color:var(--primary);">Yeni Tahsilat</div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label>Tahsilat Tipi</label>
+          <select x-model="tahForm.tahsilat_tipi" @change="tahTipDegisti()">
+            <option value="nakit">Nakit / Havale</option>
+            <option value="cek">Çek</option>
+          </select>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+          <div class="form-group">
+            <label>Tutar (<span x-text="tahOzet.doviz"></span>)</label>
+            <input type="number" step="any" inputmode="decimal" x-model.number="tahForm.tutar" placeholder="0.00">
+          </div>
+          <div class="form-group">
+            <label>Evrak No</label>
+            <input type="text" x-model="tahForm.evrak_no" placeholder="Dekont/havale no">
+          </div>
+        </div>
+
+        <!-- ÇEK BİLGİLERİ (tahsilat tipi çek ise) -->
+        <div x-show="tahForm.tahsilat_tipi === 'cek'" x-cloak style="padding:12px; background:#EFF6FF; border-radius:8px; border:1px solid #BFDBFE; margin-bottom:10px;">
+          <div style="font-size:11px; font-weight:700; color:#1E40AF; margin-bottom:8px;">📄 Çek Bilgileri — alınan çek olarak kaydedilecek</div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+            <div class="form-group"><label style="font-size:11px;">Çek No</label><input type="text" x-model="tahForm.cek.cek_no" placeholder="Örn: 1234567"></div>
+            <div class="form-group"><label style="font-size:11px;">Banka</label><input type="text" x-model="tahForm.cek.banka_adi" placeholder="Çekin bankası"></div>
+            <div class="form-group"><label style="font-size:11px;">Şube</label><input type="text" x-model="tahForm.cek.sube" placeholder="Şube"></div>
+            <div class="form-group"><label style="font-size:11px;">Keşideci</label><input type="text" x-model="tahForm.cek.hesap_sahibi" placeholder="Çeki düzenleyen"></div>
+            <div class="form-group"><label style="font-size:11px;">Keşide Tarihi</label><input type="date" x-model="tahForm.cek.keside_tarihi"></div>
+            <div class="form-group"><label style="font-size:11px;">Vade Tarihi <span style="color:#C2410C;">*</span></label><input type="date" x-model="tahForm.cek.vade_tarihi"></div>
+          </div>
+        </div>
+
+        <div class="form-group" x-show="tahForm.tahsilat_tipi !== 'cek'">
+          <label>Hangi Kasaya Yatırıldı?</label>
+          <select x-model="tahForm.kasa_id">
+            <option value="">— Kasa seçme (sadece tahsilat) —</option>
+            <template x-for="k in kasaListesi" :key="k.id">
+              <option :value="k.id" x-text="k.ad + ' (' + k.doviz + ')'"></option>
+            </template>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Açıklama</label>
+          <input type="text" x-model="tahForm.aciklama" placeholder="Opsiyonel">
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" @click="tahForm.tutar = tahOzet.kalan">Tümünü Öde</button>
+          <button class="btn btn-primary btn-sm" @click="tahsilatKaydet()">Tahsilat Ekle</button>
+        </div>
+      </div>
+
+      <div x-show="tahOzet.kalan <= 0.01" class="bilgi-kutu"
+           style="background:var(--success-bg); color:var(--success); border-color:#CBD6CC; text-align:center; font-weight:700; margin-bottom:16px;">
+        Fatura tamamen tahsil edildi
+      </div>
+
+      <!-- Geçmiş -->
+      <div x-show="tahOzet.tahsilatlar && tahOzet.tahsilatlar.length > 0">
+        <div style="font-weight:700; font-size:13px; margin-bottom:8px; color:var(--primary);">Tahsilat Geçmişi</div>
+        <table style="width:100%; font-size:12px; border-collapse:collapse;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border-mid);">
+              <th style="text-align:left; padding:6px;">Tarih</th>
+              <th style="text-align:left; padding:6px;">Evrak</th>
+              <th style="text-align:right; padding:6px;">Tutar</th>
+              <th style="padding:6px; width:40px;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="t in tahOzet.tahsilatlar" :key="t.id">
+              <tr style="border-bottom:1px solid var(--border-soft);">
+                <td style="padding:6px;" x-text="fmtTarih(t.tarih)"></td>
+                <td style="padding:6px;" x-text="t.evrak_no || '—'"></td>
+                <td style="padding:6px; text-align:right; font-family:monospace; font-weight:600;" x-text="fmt(t.tutar) + ' ' + t.doviz"></td>
+                <td style="padding:6px; text-align:center;">
+                  <button class="btn btn-danger btn-sm" style="padding:2px 6px;" @click="tahsilatSil(t.id)" title="Sil">✕</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="btn-row mt-md" style="justify-content:flex-end;">
+        <button class="btn btn-secondary" @click="tahModal=false">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════
+       DÜZENLE MODAL
+       ════════════════════════════════════════════════════ -->
+  <div class="modal-bg" x-show="modal" x-cloak @click.self="modal=false">
+    <div class="modal" style="width:min(720px, 95vw); max-height:90vh; overflow-y:auto;">
+      <div class="modal-title">
+        Fatura Düzenle — <span x-text="form.id" style="font-family:monospace; color:var(--accent);"></span>
+        <span x-show="(form.yon || 'satis') === 'satis'" class="ftr-yon-rozet satis" style="margin-left:8px;">SATIŞ</span>
+        <span x-show="form.yon === 'alis'" class="ftr-yon-rozet alis" style="margin-left:8px;">ALIŞ</span>
+        <span class="modal-close" @click="modal=false">×</span>
+      </div>
+
+      <!-- Özet kart -->
+      <div class="bilgi-kutu" style="margin-bottom:16px; padding:12px 14px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:12px;">
+          <div><strong>Müşteri:</strong> <span x-text="form.musteri || '—'"></span></div>
+          <div><strong>Tutar:</strong> <span x-text="Utils.fmt3(form.toplam || 0) + ' ' + (form.doviz || 'USD')" style="color:var(--success); font-weight:700;"></span></div>
+          <div>
+            <strong>Sipariş:</strong>
+            <span x-show="form.siparis_id" x-text="form.siparis_id" style="font-family:monospace; color:var(--info);"></span>
+            <span x-show="!form.siparis_id" style="color:var(--text-muted);">—</span>
+          </div>
+          <div>
+            <strong>Proforma:</strong>
+            <span x-show="form.proforma_id" x-text="form.proforma_id" style="font-family:monospace; color:var(--info);"></span>
+            <span x-show="!form.proforma_id" style="color:var(--text-muted);">—</span>
+          </div>
+          <div style="grid-column:1/-1;">
+            <strong>Tip:</strong>
+            <select x-model="form.fatura_tipi" style="padding:4px 10px; border:1px solid var(--border-mid); border-radius:6px; font-size:12px; font-weight:600;">
+              <option value="stoklu">STOKLU (Stoktan satış)</option>
+              <option value="transit">TRANSİT (Dış alım, maliyet zorunlu)</option>
+              <option value="teklif">TEKLİF (Maliyet opsiyonel)</option>
+            </select>
+          </div>
+          <div>
+            <strong>Satış Tipi:</strong>
+            <span x-show="(form.satis_tipi || 'ihracat') === 'ihracat'" style="color:var(--success);">İhracat</span>
+            <span x-show="form.satis_tipi === 'yurtici_kdvli'" style="color:#8A6D1B;">Yurt İçi KDV'li</span>
+            <span x-show="form.satis_tipi === 'yurtici_kdvsiz'" style="color:var(--text-muted);">KDV'siz</span>
+            <span x-show="form.satis_tipi === 'ihrac_kayitli'" style="color:var(--accent);">İhraç Kayıtlı</span>
+          </div>
+        </div>
+        <div x-show="form.kdv_oran > 0 || form.tevkifat_oran"
+             style="border-top:1px solid var(--border-mid); margin-top:10px; padding-top:10px; font-size:12px;">
+          <div x-show="form.kdv_oran > 0">
+            <strong>KDV:</strong> %<span x-text="form.kdv_oran"></span>
+            <span x-show="form.kdv_tutar"> → <span x-text="Utils.fmt3(form.kdv_tutar) + ' ' + form.doviz"></span></span>
+          </div>
+          <div x-show="form.tevkifat_oran" style="color:var(--accent);">
+            <strong>Tevkifat:</strong> <span x-text="form.tevkifat_oran"></span>
+            <span x-show="form.tevkifat_tutar"> → <span x-text="Utils.fmt3(form.tevkifat_tutar) + ' ' + form.doviz"></span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Fatura No</label>
+        <input type="text" x-model="form.fatura_no" placeholder="Örn. MIL2026000123">
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+        <div class="form-group">
+          <label>Fatura Tarihi</label>
+          <input type="date" x-model="form.fatura_tarihi">
+          <div style="display:flex; gap:4px; margin-top:4px; flex-wrap:wrap;">
+            <button type="button" class="tarih-btn bugun" @click="form.fatura_tarihi = TarihYardimci.bugun()">Bugün</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Vade Tarihi</label>
+          <input type="date" x-model="form.vade_tarihi">
+          <div style="display:flex; gap:4px; margin-top:4px; flex-wrap:wrap;">
+            <button type="button" class="tarih-btn" @click="form.vade_tarihi = TarihYardimci.gunEkle(form.vade_tarihi || TarihYardimci.bugun(), 15)">+15g</button>
+            <button type="button" class="tarih-btn uzun" @click="form.vade_tarihi = TarihYardimci.gunEkle(form.vade_tarihi || TarihYardimci.bugun(), 30)">+30g</button>
+            <button type="button" class="tarih-btn uzun" @click="form.vade_tarihi = TarihYardimci.gunEkle(form.vade_tarihi || TarihYardimci.bugun(), 60)">+60g</button>
+            <button type="button" class="tarih-btn uzun" @click="form.vade_tarihi = TarihYardimci.gunEkle(form.vade_tarihi || TarihYardimci.bugun(), 90)">+90g</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+        <div class="form-group">
+          <label>Ödeme Şekli</label>
+          <select x-model="form.odeme_sekli">
+            <option value="">— Seçin —</option>
+            <template x-for="o in lookupOdeme"><option :value="o" x-text="o"></option></template>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Teslim Şekli</label>
+          <select x-model="form.teslim_sekli">
+            <option value="">— Seçin —</option>
+            <template x-for="t in lookupTeslim"><option :value="t" x-text="t"></option></template>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Müşteri Adresi</label>
+        <textarea x-model="form.musteri_adres" rows="2" placeholder="Adres (faturada görünür)" style="width:100%;"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Müşteri Ülkesi</label>
+        <input type="text" x-model="form.musteri_ulke" placeholder="USA, Germany...">
+      </div>
+
+      <!-- Kur farkı modu -->
+      <div class="form-group">
+        <label style="color:var(--accent); font-weight:700;">Kur Farkı Davranışı</label>
+        <select x-model="form.kur_farki_modu">
+          <option value="gider">Gider/Gelir Modu — Cari kapansın (ihracat default)</option>
+          <option value="cari">Cari Modu — Kur farkı cariye yansır (yurt içi default)</option>
+        </select>
+        <div style="font-size:11px; color:var(--text-muted); margin-top:6px; line-height:1.4;">
+          <strong>Gider Modu:</strong> Sözleşme USD/EUR. Kur farkı senin kayıp/kazancın.<br>
+          <strong>Cari Modu:</strong> Sözleşme TRY. Kur farkı müşteriye yansır.
+        </div>
+      </div>
+
+      <!-- Transit maliyet kalemleri -->
+      <div x-show="form.fatura_tipi === 'transit' || form.fatura_tipi === 'teklif'"
+           style="border:1px solid #E8DCB0; background:var(--warn-bg); border-radius:var(--radius-md); padding:14px; margin-bottom:16px;">
+        <div style="font-weight:700; font-size:13px; color:#8A6D1B; margin-bottom:4px;">
+          Transit / Dış Alım Faturası
+        </div>
+        <div style="font-size:11px; color:#8A6D1B; margin-bottom:10px;">
+          Ürün stoğa girmeden satıldı. Kâr hesabı için alış maliyeti kalemleri zorunlu.
+        </div>
+
+        <datalist id="ftr-cins-list">
+          <template x-for="c in cinsListesi" :key="c"><option :value="c"></option></template>
+        </datalist>
+        <datalist id="ftr-tedarikci-list">
+          <template x-for="t in tedarikciListesi" :key="t"><option :value="t"></option></template>
+        </datalist>
+
+        <template x-for="(mk, idx) in form.maliyet_kalemleri" :key="idx">
+          <div style="display:grid; grid-template-columns:1.4fr 1fr 0.8fr 0.9fr 1fr 32px; gap:6px; margin-bottom:6px; align-items:end;">
+            <div>
+              <label x-show="idx===0" class="label-sm">Cins</label>
+              <input type="text" x-model="mk.cins" list="ftr-cins-list" placeholder="Cins">
+            </div>
+            <div>
+              <label x-show="idx===0" class="label-sm">Tedarikçi</label>
+              <input type="text" x-model="mk.tedarikci" list="ftr-tedarikci-list" placeholder="Tedarikçi">
+            </div>
+            <div>
+              <label x-show="idx===0" class="label-sm">Miktar</label>
+              <input type="number" step="0.001" x-model="mk.miktar" placeholder="0">
+            </div>
+            <div>
+              <label x-show="idx===0" class="label-sm">Birim</label>
+              <select x-model="mk.birim">
+                <option value="m2">m²</option><option value="sqft">sqft</option>
+                <option value="ton">ton</option><option value="m3">m³</option><option value="adet">adet</option>
+              </select>
+            </div>
+            <div>
+              <label x-show="idx===0" class="label-sm">Birim Fiyat</label>
+              <input type="number" step="0.01" x-model="mk.birim_fiyat" placeholder="0">
+            </div>
+            <button type="button" @click="maliyetKalemSil(idx)"
+                    style="padding:8px; background:var(--danger-bg); border:none; border-radius:6px; cursor:pointer; color:var(--danger); font-weight:bold;">✕</button>
+          </div>
+        </template>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+          <button type="button" class="btn btn-secondary btn-sm" @click="maliyetKalemEkle()"
+                  style="background:#fef3c7; color:#92400e; border-color:#fde68a;">+ Kalem Ekle</button>
+          <div style="font-size:13px; font-weight:700; color:#92400e;">
+            Toplam Alış Maliyeti: <span x-text="Utils.fmt3(maliyetToplam) + ' ' + form.maliyet_doviz"></span>
+          </div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <label class="label-sm" style="color:#92400e;">Maliyet Dövizi</label>
+          <select x-model="form.maliyet_doviz" style="width:120px;">
+            <option>USD</option><option>EUR</option><option>TRY</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Açıklama / Notlar</label>
+        <textarea x-model="form.aciklama" rows="2" placeholder="Fatura üzerinde görünecek notlar" style="width:100%;"></textarea>
+      </div>
+
+      <div class="bilgi-kutu" style="margin-bottom:16px;">
+        "Kesildi" yapmak için Fatura No gerekli. Kesilince cariye borç işlenir ve kâr kaydı oluşur.
+      </div>
+
+      <div class="btn-row" style="justify-content:flex-end;">
+        <button class="btn btn-secondary" @click="modal=false">Vazgeç</button>
+        <button class="btn btn-primary" @click="kaydet()">Kaydet</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function faturaApp() {
+  return {
+    rows: [],
+    musteriler: [],
+    cinsListesi: [],
+    kasaListesi: [],
+    tedarikciListesi: [],
+    lookupOdeme: [],
+    lookupTeslim: [],
+    filtre: { musteri: '', durum: '', yon: '', acik: false },
+    modal: false,
+    form: {},
+    tahModal: false,
+    tahFatura: {},
+    tahForm: { tutar: '', evrak_no: '', aciklama: '', kasa_id: '', tahsilat_tipi: 'nakit',
+               cek: { cek_no: '', banka_adi: '', sube: '', hesap_sahibi: '', keside_tarihi: '', vade_tarihi: '' } },
+    tahOzet: { fatura_toplam: 0, tahsil_edilen: 0, kalan: 0, doviz: 'USD', tahsilatlar: [] },
+
+    async init() {
+      // URL parametrelerinden filtre uygula (dashboard akış kartlarından gelince)
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('yon')) this.filtre.yon = params.get('yon');
+      if (params.get('durum')) this.filtre.durum = params.get('durum');
+      if (params.get('acik') === '1') this.filtre.acik = true;
+      await this.listele();
+      try {
+        const r = await fetch('/api/fatura').then(r=>r.json());
+        const set = new Set((r.data||[]).map(f => f.musteri).filter(Boolean));
+        this.musteriler = [...set].sort();
+      } catch(e) { console.error(e); }
+
+      try {
+        const ci = await fetch('/api/lookup/cins').then(r=>r.json());
+        this.cinsListesi = (ci || []).map(x => x.deger || x).filter(Boolean).sort();
+      } catch(e) { console.error(e); }
+
+      try {
+        const cr = await fetch('/api/cari?per_page=1000').then(r=>r.json());
+        this.tedarikciListesi = (cr.data || [])
+          .filter(c => String(c.cari_tip || '').includes('Tedarikci') || String(c.cari_tip || '').includes('Her ikisi'))
+          .map(c => c.unvan).filter(Boolean).sort();
+      } catch(e) { console.error(e); }
+
+      try {
+        const [od, te, ka] = await Promise.all([
+          fetch('/api/lookup/odeme').then(r=>r.json()).catch(()=>[]),
+          fetch('/api/lookup/teslim').then(r=>r.json()).catch(()=>[]),
+          fetch('/api/kasa').then(r=>r.json()).catch(()=>({ kasalar: [] }))
+        ]);
+        this.kasaListesi = Array.isArray(ka) ? ka : (ka.kasalar || ka.data || []);
+        this.lookupOdeme = (od || []).map(x => x.deger || x).filter(Boolean);
+        this.lookupTeslim = (te || []).map(x => x.deger || x).filter(Boolean);
+      } catch(e) { console.error('lookup yüklenemedi', e); }
+    },
+
+    async listele() {
+      const p = new URLSearchParams();
+      if (this.filtre.musteri) p.set('musteri', this.filtre.musteri);
+      if (this.filtre.durum) p.set('durum', this.filtre.durum);
+      if (this.filtre.yon) p.set('yon', this.filtre.yon);
+      try {
+        const r = await fetch('/api/fatura?' + p).then(r=>r.json());
+        let rows = (r.data || []).map(f => ({ ...f, _eskiDurum: f.durum }));
+        // "Açık" filtre: sadece tahsil/ödeme bekleyenler (Kesildi veya Kısmi Tahsil)
+        if (this.filtre.acik) {
+          rows = rows.filter(f => f.durum === 'Kesildi' || f.durum === 'Kismi Tahsil');
+        }
+        this.rows = rows;
+      } catch(e) { Utils.error('Liste yüklenemedi: ' + e.message); }
+    },
+
+    async duzenleAc(f) {
+      let detay = {};
+      try {
+        const r = await fetch('/api/fatura/' + f.id).then(r=>r.json());
+        if (r.ok) detay = r.fatura || {};
+      } catch(e) { console.error(e); }
+
+      this.form = {
+        id: f.id,
+        fatura_no: detay.fatura_no || f.fatura_no || '',
+        fatura_tarihi: detay.fatura_tarihi || f.fatura_tarihi || '',
+        vade_tarihi: detay.vade_tarihi || f.vade_tarihi || '',
+        odeme_sekli: detay.odeme_sekli || '',
+        teslim_sekli: detay.teslim_sekli || '',
+        musteri: detay.musteri || f.musteri || '',
+        musteri_adres: detay.musteri_adres || '',
+        musteri_ulke: detay.musteri_ulke || '',
+        aciklama: detay.aciklama || '',
+        kur_farki_modu: detay.kur_farki_modu || (detay.doviz === 'TRY' ? 'cari' : 'gider'),
+        toplam: detay.toplam || f.toplam || 0,
+        doviz: detay.doviz || f.doviz || 'USD',
+        siparis_id: detay.siparis_id || f.siparis_id || '',
+        proforma_id: detay.proforma_id || f.proforma_id || '',
+        yon: detay.yon || f.yon || 'satis',
+        fatura_tipi: detay.fatura_tipi || 'stoklu',
+        satis_tipi: detay.satis_tipi || 'ihracat',
+        kdv_oran: detay.kdv_oran || 0,
+        kdv_tutar: detay.kdv_tutar || 0,
+        tevkifat_oran: detay.tevkifat_oran || '',
+        tevkifat_tutar: detay.tevkifat_tutar || 0,
+        durum: detay.durum || f.durum || 'Taslak',
+        maliyet_doviz: detay.maliyet_doviz || 'USD',
+        maliyet_kalemleri: detay.maliyet_kalemleri || []
+      };
+
+      if (this.form.fatura_tipi === 'transit' && this.form.maliyet_kalemleri.length === 0) {
+        this.form.maliyet_kalemleri = [this.bosMaliyetKalem()];
+      }
+      this.modal = true;
+    },
+
+    bosMaliyetKalem() {
+      return { cins: '', tedarikci: '', miktar: '', birim: 'm2', birim_fiyat: '' };
+    },
+    maliyetKalemEkle() {
+      if (!this.form.maliyet_kalemleri) this.form.maliyet_kalemleri = [];
+      this.form.maliyet_kalemleri.push(this.bosMaliyetKalem());
+    },
+    maliyetKalemSil(idx) {
+      this.form.maliyet_kalemleri.splice(idx, 1);
+      if (this.form.maliyet_kalemleri.length === 0) this.form.maliyet_kalemleri.push(this.bosMaliyetKalem());
+    },
+    get maliyetToplam() {
+      if (!this.form.maliyet_kalemleri) return 0;
+      return this.form.maliyet_kalemleri.reduce((t, mk) =>
+        t + (parseFloat(mk.miktar) || 0) * (parseFloat(mk.birim_fiyat) || 0), 0);
+    },
+
+    async kaydet() {
+      let payload = { ...this.form };
+      if (this.form.fatura_tipi === 'transit') {
+        const dolu = (this.form.maliyet_kalemleri || []).filter(mk =>
+          mk.cins || (parseFloat(mk.miktar) || 0) > 0 || (parseFloat(mk.birim_fiyat) || 0) > 0);
+        payload.maliyet_kalemleri = dolu;
+        payload.alis_maliyeti = this.maliyetToplam;
+      }
+      try {
+        const r = await fetch('/api/fatura/' + this.form.id, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const d = await r.json();
+        if (d.ok) { this.modal = false; await this.listele(); Utils.success('Kaydedildi'); }
+        else Utils.error(d.mesaj || 'Hata');
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async durumGuncelle(f, ev) {
+      const yeniDurum = ev.target.value;
+      const eskiDurum = f._eskiDurum;
+
+      if (yeniDurum === 'Kesildi') {
+        if (!(await Utils.confirm('Fatura "Kesildi" durumuna alınacak.\n\nMüşteriye ' + this.fmt(f.toplam) + ' ' + f.doviz + ' BORÇ işlenecek.\n\nDevam edilsin mi?'))) {
+          f.durum = eskiDurum; return;
+        }
+      }
+      if (yeniDurum === 'Iptal' && eskiDurum === 'Kesildi') {
+        if (!(await Utils.confirm('Fatura iptal edilecek. İlgili borç hareketi geri alınacak. Devam?'))) {
+          f.durum = eskiDurum; return;
+        }
+      }
+      const tahsilatDurumlari = ['Kismi Tahsil', 'Tahsil Edildi'];
+      if (tahsilatDurumlari.includes(yeniDurum) && !(['Kesildi'].concat(tahsilatDurumlari)).includes(eskiDurum)) {
+        Utils.error('Tahsilat durumuna geçmek için fatura önce "Kesildi" olmalı');
+        f.durum = eskiDurum; return;
+      }
+
+      try {
+        const r = await fetch('/api/fatura/' + f.id + '/durum', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ durum: yeniDurum })
+        });
+        const d = await r.json();
+        if (d.ok) { Utils.success(d.mesaj || 'Durum güncellendi'); await this.listele(); }
+        else { Utils.error(d.mesaj || 'Hata'); f.durum = eskiDurum; await this.listele(); }
+      } catch(e) { Utils.error('Hata: ' + e.message); f.durum = eskiDurum; }
+    },
+
+    async faturaSil(f) {
+      if (!(await Utils.confirm('Fatura ' + f.id + ' silinecek. Devam?'))) return;
+      try {
+        const r = await fetch('/api/fatura/' + f.id, { method: 'DELETE' });
+        const d = await r.json();
+        if (d.ok) { Utils.success('Silindi'); await this.listele(); }
+        else Utils.error(d.mesaj || 'Hata');
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async tahsilatAc(f) {
+      this.tahFatura = f;
+      this.tahForm = { tutar: '', evrak_no: '', aciklama: '', kasa_id: '' };
+      await this.tahsilatOzetYukle(f.id);
+      this.tahModal = true;
+    },
+
+    async tahsilatOzetYukle(faturaId) {
+      try {
+        const r = await fetch('/api/fatura/' + faturaId + '/tahsilatlar').then(r=>r.json());
+        if (r.ok) {
+          this.tahOzet = {
+            fatura_toplam: r.fatura_toplam,
+            tahsil_edilen: r.tahsil_edilen,
+            kalan: r.kalan,
+            doviz: r.doviz,
+            tahsilatlar: r.tahsilatlar || []
+          };
+        }
+      } catch(e) { console.error(e); }
+    },
+
+    tahTipDegisti() {
+      // Çek seçilince kasa temizle (çek kasaya girmez, portföye girer)
+      if (this.tahForm.tahsilat_tipi === 'cek') {
+        this.tahForm.kasa_id = '';
+      }
+    },
+    async tahsilatKaydet() {
+      const tutar = parseFloat(this.tahForm.tutar) || 0;
+      if (tutar <= 0) { Utils.error('Geçerli bir tutar girin'); return; }
+      // Çek ise vade zorunlu
+      if (this.tahForm.tahsilat_tipi === 'cek' && !this.tahForm.cek.vade_tarihi) {
+        Utils.error('Çek için vade tarihi zorunludur'); return;
+      }
+      try {
+        const govde = {
+          tutar: this.tahForm.tutar,
+          evrak_no: this.tahForm.evrak_no,
+          aciklama: this.tahForm.aciklama,
+          kasa_id: this.tahForm.kasa_id,
+          tahsilat_tipi: this.tahForm.tahsilat_tipi
+        };
+        if (this.tahForm.tahsilat_tipi === 'cek') {
+          govde.cek = { ...this.tahForm.cek };
+        }
+        const r = await fetch('/api/fatura/' + this.tahFatura.id + '/tahsilat', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(govde)
+        });
+        const d = await r.json();
+        if (d.ok) {
+          Utils.success(d.mesaj || 'Tahsilat eklendi');
+          this.tahForm = { tutar: '', evrak_no: '', aciklama: '', kasa_id: '', tahsilat_tipi: 'nakit',
+                           cek: { cek_no: '', banka_adi: '', sube: '', hesap_sahibi: '', keside_tarihi: '', vade_tarihi: '' } };
+          await this.tahsilatOzetYukle(this.tahFatura.id);
+          await this.listele();
+        } else Utils.error(d.mesaj || 'Hata');
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async tahsilatSil(hareketId) {
+      if (!(await Utils.confirm('Bu tahsilat silinecek. Devam?'))) return;
+      try {
+        const r = await fetch('/api/tahsilat/' + hareketId, { method: 'DELETE' });
+        const d = await r.json();
+        if (d.ok) {
+          await this.tahsilatOzetYukle(this.tahFatura.id);
+          await this.listele();
+        } else Utils.error(d.mesaj || 'Hata');
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    fmt(n) {
+      n = parseFloat(n) || 0;
+      return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    },
+    fmtTarih(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleDateString('tr-TR');
+    }
+  };
+}
+</script>
+{% endblock %}

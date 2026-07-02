@@ -1,0 +1,1371 @@
+{% extends "base.html" %}
+{% block title %}Maliyetler{% endblock %}
+{% block header_title %}Üretim Giderleri ve Maliyet Atama Dağılımı{% endblock %}
+{% block content %}
+<style>
+  /* ════════════════════════════════════════════════════
+     MALİYET MODÜLÜ — LIGHT LUXURY TASARIM
+     ════════════════════════════════════════════════════ */
+
+  /* Pasif kayıt görünümü (KDV iadeye dönüştürülmüş) */
+  .maliyet-pasif { opacity: 0.55; background: var(--bg-body) !important; }
+  .maliyet-pasif td { color: var(--text-light) !important; text-decoration: line-through; }
+  .pasif-badge {
+    background: var(--text-light); color: #fff;
+    padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 700; margin-left: 6px;
+  }
+
+  /* Üst Bar */
+  .ust-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--bg-surface); padding: 16px 24px;
+    border-radius: var(--radius-md); border: 1px solid var(--border-soft);
+    margin-bottom: 24px; box-shadow: var(--shadow-blur);
+    flex-wrap: wrap; gap: 16px;
+  }
+  .ust-bar-title { font-size: 15px; font-weight: 700; color: var(--primary); }
+
+  /* Filtre Bar */
+  .filter-bar-modern {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    margin-bottom: 24px; background: var(--bg-surface);
+    padding: 20px; border-radius: var(--radius-md);
+    border: 1px solid var(--border-soft);
+    align-items: flex-end; box-shadow: var(--shadow-blur);
+  }
+  .filter-item { display: flex; flex-direction: column; gap: 6px; min-width: 150px; }
+  .filter-item label {
+    font-size: 11px; font-weight: 700;
+    color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .filter-item select, .filter-item input {
+    padding: 10px 14px; border: 1px solid var(--border-mid);
+    border-radius: var(--radius-sm); background: var(--bg-surface);
+    color: var(--text-main); font-size: 13px;
+    outline: none; transition: border-color 0.2s; font-family: inherit;
+  }
+  .filter-item select:focus, .filter-item input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(35, 40, 36, 0.04);
+  }
+  .filter-search { flex: 1; min-width: 200px; }
+
+  /* Tablo */
+  .data-table-wrapper {
+    background: var(--bg-surface); border-radius: var(--radius-md);
+    border: 1px solid var(--border-soft); box-shadow: var(--shadow-blur);
+    overflow-x: auto; margin-bottom: 30px;
+  }
+  .crisp-list-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+  .crisp-list-table th {
+    background: var(--bg-body); color: var(--text-muted);
+    padding: 16px 20px; font-weight: 600;
+    border-bottom: 1px solid var(--border-soft);
+    text-transform: uppercase; font-size: 11px;
+    letter-spacing: 0.5px; white-space: nowrap;
+  }
+  .crisp-list-table td {
+    padding: 16px 20px; border-bottom: 1px solid var(--border-soft);
+    color: var(--text-main); vertical-align: middle;
+  }
+  .crisp-list-table tr:hover { background-color: var(--row-hover); }
+  .maliyet-pasif:hover { background-color: var(--bg-body) !important; }
+
+  .status-pill {
+    padding: 4px 10px; border-radius: 30px;
+    font-size: 11px; font-weight: 600;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+
+  /* Modal */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(35, 40, 36, .55);
+    z-index: 200; display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(3px);
+  }
+  .modal {
+    background: var(--bg-surface); border-radius: var(--radius-md);
+    padding: 24px; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+  }
+  .modal-title {
+    font-size: 16px; font-weight: 700; margin-bottom: 18px;
+    display: flex; justify-content: space-between; align-items: center;
+    color: var(--text-main); padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .modal-close { cursor: pointer; color: var(--text-light); font-size: 24px; line-height: 1; }
+  .modal-close:hover { color: var(--danger); }
+
+  /* Form */
+  .form-grid-2col {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 20px; margin-bottom: 20px;
+  }
+  @media (max-width: 700px) { .form-grid-2col { grid-template-columns: 1fr; } }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label {
+    font-size: 11px; font-weight: 700;
+    color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .form-group input, .form-group select, .form-group textarea {
+    padding: 10px 14px; border: 1px solid var(--border-mid);
+    border-radius: var(--radius-sm); background: var(--bg-surface);
+    color: var(--text-main); font-size: 13px;
+    outline: none; transition: border-color 0.2s; font-family: inherit;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(35, 40, 36, 0.04);
+  }
+
+  .baglanti-secim-alani {
+    background: var(--bg-body); border-radius: var(--radius-md);
+    padding: 20px; margin-bottom: 20px;
+    border: 1px solid var(--border-soft);
+  }
+
+  .info-box {
+    background: var(--info-bg); padding: 14px 20px;
+    border-radius: var(--radius-sm); margin-top: 16px;
+    font-size: 13px; color: var(--info);
+    border: 1px solid #C4D2E6;
+  }
+
+  /* Butonlar */
+  .btn {
+    padding: 9px 18px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    border: 1px solid transparent; transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: inherit;
+  }
+  .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .btn-primary:hover { background: var(--primary-light); }
+  .btn-primary:disabled { background: var(--text-light); cursor: not-allowed; }
+  .btn-secondary { background: var(--bg-surface); color: var(--text-main); border-color: var(--border-mid); }
+  .btn-secondary:hover { background: var(--row-hover); }
+  .btn-outline { background: transparent; color: var(--text-main); border-color: var(--border-mid); }
+  .btn-outline:hover { background: var(--row-hover); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+  .btn-icon-soft {
+    width: 32px; height: 32px; border-radius: 8px;
+    border: 1px solid var(--border-mid); background: var(--bg-surface);
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s ease;
+  }
+  .btn-icon-soft svg { width:15px; height:15px; stroke-width:1.8; }
+  .btn-icon-soft:hover { background: var(--border-soft); transform: translateY(-1px); }
+  .btn-icon-soft.danger:hover {
+    background: var(--danger-bg); border-color: #E2C9C5; color: var(--danger);
+  }
+</style>
+
+<div x-data="maliApp()" x-init="init()">
+
+  <!-- ═══ ÜST BAR ═══ -->
+  <div class="ust-bar">
+    <div class="ust-bar-title">Hammadde Gider Yönetimi</div>
+    <div style="display:flex; gap:12px; align-items:center;">
+      <button x-show="seciliIds.length > 0" @click="seciliSil()"
+              class="btn btn-danger" style="font-size:12px; padding:6px 14px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Seçiliyi Sil (<span x-text="seciliIds.length"></span>)
+      </button>
+      <button class="btn btn-outline" @click="raporAc()" style="border-color:var(--accent); color:var(--accent);">Maliyet Raporu</button>
+      <button class="btn btn-secondary" @click="topluAc()">Toplu Maliyet Girişi</button>
+      <button class="btn btn-primary" @click="tekAc()">+ Münferit Gider Girişi</button>
+    </div>
+  </div>
+
+  <!-- ═══ FİLTRE BAR ═══ (CASCADE) -->
+  <div class="filter-bar-modern">
+    <div class="filter-item">
+      <label>Gider Tipi</label>
+      <select x-model="filtre.maliyet_tip" @change="filtreDegisti('maliyet_tip')">
+        <option value="">Tümü</option>
+        <template x-for="t in cascadeMaliyet_tipler" :key="t">
+          <option :value="t" x-text="t"></option>
+        </template>
+      </select>
+    </div>
+    <div class="filter-item">
+      <label>Stok Tipi</label>
+      <select x-model="filtre.stok_tip" @change="filtreDegisti('stok_tip')">
+        <option value="">Tümü</option>
+        <template x-for="t in cascadeStok_tipler" :key="t">
+          <option :value="t" x-text="t"></option>
+        </template>
+      </select>
+    </div>
+    <div class="filter-item">
+      <label>Üretici</label>
+      <select x-model="filtre.uretici" @change="filtreDegisti('uretici')">
+        <option value="">Tümü</option>
+        <template x-for="u in cascadeUreticiler" :key="u">
+          <option :value="u" x-text="u"></option>
+        </template>
+      </select>
+    </div>
+    <div class="filter-item">
+      <label>Ürün Cinsi</label>
+      <select x-model="filtre.cins" @change="filtreDegisti('cins')">
+        <option value="">Tümü</option>
+        <template x-for="c in cascadeCinsler" :key="c">
+          <option :value="c" x-text="c"></option>
+        </template>
+      </select>
+    </div>
+    <div class="filter-item">
+      <label>Fatura No</label>
+      <select x-model="filtre.fatura_no" @change="filtreDegisti('fatura_no')">
+        <option value="">Tümü</option>
+        <template x-for="f in cascadeFatura_nolar" :key="f">
+          <option :value="f" x-text="f"></option>
+        </template>
+      </select>
+    </div>
+    <div class="filter-item">
+      <label>Blok / Ref No</label>
+      <select x-model="filtre.blok_ref_no" @change="filtreDegisti('blok_ref_no')">
+        <option value="">Tümü</option>
+        <template x-for="b in cascadeBlok_ref_nolar" :key="b">
+          <option :value="b" x-text="b"></option>
+        </template>
+      </select>
+    </div>
+    <div class="filter-item">
+      <label>Bağlantı Tipi</label>
+      <select x-model="filtre.baglanti_tip" @change="filtreDegisti('baglanti_tip')">
+        <option value="">Tümü</option>
+        <template x-for="t in cascadeBaglanti_tipler" :key="t">
+          <option :value="t" x-text="t"></option>
+        </template>
+      </select>
+    </div>
+    <div class="filter-item">
+      <label>Tarih Aralığı</label>
+      <div style="display:flex; gap:10px;">
+        <input type="date" x-model="filtre.bas_tarih" placeholder="Başlangıç">
+        <input type="date" x-model="filtre.bit_tarih" placeholder="Bitiş">
+      </div>
+    </div>
+    <div class="filter-item" style="justify-content:center;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; font-weight:600; color:var(--text-main); margin-bottom:0; text-transform:none; letter-spacing:0;">
+        <input type="checkbox" x-model="filtre.pasifler_dahil" @change="init()" style="width:18px; height:18px; margin:0;">
+        Pasifleri de Göster
+      </label>
+    </div>
+    <div class="filter-item" style="justify-content:center;">
+      <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:12px; font-weight:600; color:var(--text-main); margin-bottom:0; text-transform:none; letter-spacing:0;">
+        <input type="checkbox" x-model="filtre.satin_alma_goster" @change="init()" style="width:18px; height:18px; margin:0;">
+        Satın Alma Bedelleri
+      </label>
+    </div>
+    <div class="filter-item">
+      <button class="btn btn-outline" @click="filtreleriTemizle()">Sıfırla</button>
+    </div>
+  </div>
+
+  <!-- ═══ MALİYET LİSTESİ TABLOSU ═══ -->
+  <div class="data-table-wrapper">
+    <table class="crisp-list-table">
+      <thead>
+        <tr>
+          <th style="width:36px; text-align:center;">
+            <input type="checkbox"
+                   @change="toggleTumunuSec($event.target.checked)"
+                   :checked="tumSecili && rows.length > 0"
+                   style="cursor:pointer;">
+          </th>
+          <th>Tarih</th>
+          <th>Gider Tipi Sınıfı</th>
+          <th>Modül Bağı</th>
+          <th>Bağlantı ID</th>
+          <th>Fatura No</th>
+          <th>Blok / Ref No</th>
+          <th style="text-align:right">Birim Maliyet (USD)</th>
+          <th style="text-align:right">Birim Maliyet (Orijinal)</th>
+          <th style="text-align:right">İşlem Tutarı</th>
+          <th style="text-align:right">USD Karşılık</th>
+          <th style="text-align:right; padding-right:24px;">Aksiyon</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="r in filtrelenmisRows" :key="r.id">
+          <tr :class="r.aktif === false ? 'maliyet-pasif' : ''"
+              :style="r.satin_alma ? 'background:var(--accent-light);' : ''">
+            <td style="text-align:center; width:36px;">
+              <!-- Satın alma sanal satırı seçilemez (toplu silmeye girmez) -->
+              <input type="checkbox" x-show="!r.satin_alma" x-model="seciliIds" :value="r.id" style="cursor:pointer;">
+              <span x-show="r.satin_alma" style="color:var(--accent); display:inline-flex;" title="Satın alma bedeli (stok kaydından)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+            </td>
+            <td x-text="r.maliyet_tarihi"></td>
+            <td>
+              <template x-if="r.satin_alma">
+                <span class="status-pill" style="background:var(--accent-light); color:var(--accent);">Satın Alma Bedeli</span>
+              </template>
+              <template x-if="!r.satin_alma">
+                <span class="status-pill" :style="getTipBadgeStyle(r.maliyet_tip)" x-text="r.maliyet_tip"></span>
+              </template>
+              <template x-if="r.aktif === false">
+                <span class="pasif-badge" title="Bu kayıt başka bir kayda dönüştürüldü (Devreden→İade KDV)">PASIF</span>
+              </template>
+            </td>
+            <td><span class="status-pill" style="background:var(--info-bg); color:var(--info);" x-text="r.baglanti_tip"></span></td>
+            <td style="font-family:monospace; font-weight:700; color:var(--info);" x-text="r.baglanti_id"></td>
+            <td style="font-size:12px; color:var(--text-muted); font-family:monospace;" x-text="r.fatura_no || '—'"></td>
+            <td style="font-size:12px; font-weight:600; color:var(--text-main);" x-text="r.blok_ref_no || '—'"></td>
+            <td style="text-align:right; font-size:13px; color:var(--info); font-weight:600">
+              <template x-if="r.birim_maliyet">
+                <span>
+                  <span x-text="fmt3(r.birim_maliyet)"></span>
+                  <span style="font-size:11px; color:var(--text-muted)" x-text="'USD/' + r.birim_ad"></span>
+                </span>
+              </template>
+              <template x-if="!r.birim_maliyet"><span style="color:var(--text-muted)">—</span></template>
+            </td>
+            <td style="text-align:right; font-size:13px; color:var(--accent); font-weight:600">
+              <template x-if="r.birim_maliyet_orj">
+                <span>
+                  <span x-text="fmt3(r.birim_maliyet_orj)"></span>
+                  <span style="font-size:11px; color:var(--text-muted)" x-text="(r.birim_doviz || r.doviz || 'USD') + '/' + r.birim_ad"></span>
+                </span>
+              </template>
+              <template x-if="!r.birim_maliyet_orj"><span style="color:var(--text-muted)">—</span></template>
+            </td>
+            <td style="text-align:right; font-weight:700; color:var(--warn);" x-text="fmt3(r.tutar) + ' ' + (r.doviz || 'USD')"></td>
+            <td style="text-align:right; font-weight:700; color:var(--success);" x-text="hesaplaUsdKarsilik(r.tutar, r.doviz)"></td>
+            <td style="text-align:right; padding-right:24px;">
+              <div style="display:flex; gap:6px; justify-content:flex-end;" x-show="!r.satin_alma">
+                <button class="btn-icon-soft" @click="tekDuzenle(r)" title="Düzenle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></button>
+                <button class="btn-icon-soft danger" @click="maliyetSil(r.id)" title="Sil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+              </div>
+              <span x-show="r.satin_alma" style="font-size:11px; color:var(--text-light); font-style:italic;"
+                    title="Stok modülünden düzenlenir">stoktan</span>
+            </td>
+          </tr>
+        </template>
+        <tr x-show="filtrelenmisRows.length === 0">
+          <td colspan="12" style="text-align:center; padding:50px; color:var(--text-light);">Filtre kriterlerine uygun maliyet kaydı bulunamadı.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════ TEK MALİYET MODALI ═══════════════ -->
+  <!-- ═══ MALİYET RAPORU MODALI ═══ -->
+  <div class="modal-bg" x-show="mRapor" x-cloak @click.self="mRapor=false">
+    <div class="modal" style="width:1180px; max-width:96vw; max-height:90vh; overflow-y:auto;">
+      <div class="modal-title">
+        <span>Toplu Maliyet Raporu</span>
+        <span class="modal-close" @click="mRapor=false">&times;</span>
+      </div>
+
+      <!-- CASCADE FİLTRELER -->
+      <div style="background:var(--bg-body); border:1px solid var(--border-soft); border-radius:10px; padding:14px; margin-bottom:16px;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:10px;">
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:11px;">Stok Tipi</label>
+            <select x-model="rFiltre.stok_tip" @change="rFiltreDegisti('stok_tip')">
+              <option value="">Tümü</option>
+              <template x-for="t in rCascadeStokTipler" :key="t"><option :value="t" x-text="t"></option></template>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:11px;">Üretici</label>
+            <select x-model="rFiltre.uretici" @change="rFiltreDegisti('uretici')">
+              <option value="">Tümü</option>
+              <template x-for="u in rCascadeUreticiler" :key="u"><option :value="u" x-text="u"></option></template>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:11px;">Ürün Cinsi</label>
+            <select x-model="rFiltre.cins" @change="rFiltreDegisti('cins')">
+              <option value="">Tümü</option>
+              <template x-for="c in rCascadeCinsler" :key="c"><option :value="c" x-text="c"></option></template>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label style="font-size:11px;">Blok / Referans Kökü</label>
+            <select x-model="rFiltre.kok" @change="rFiltreDegisti('kok')">
+              <option value="">Tümü</option>
+              <template x-for="k in rCascadeKokler" :key="k"><option :value="k" x-text="k"></option></template>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:flex-end; margin-top:12px; flex-wrap:wrap;">
+          <div class="form-group" style="flex:1; min-width:240px; margin:0;">
+            <label style="font-size:11px;">veya doğrudan kök gir (Enter)</label>
+            <input type="text" x-model="raporRef" @keydown.enter="raporCalistir()"
+                   placeholder="Örn: KRT-EMP1226120A" list="rapor-ref-list">
+            <datalist id="rapor-ref-list">
+              <template x-for="k in raporKokListesi" :key="k"><option :value="k"></option></template>
+            </datalist>
+          </div>
+          <button class="btn btn-primary" @click="raporCalistir()" style="background:var(--accent); border-color:var(--accent);">
+            Raporu Getir
+          </button>
+          <button class="btn btn-outline" @click="rFiltreTemizle()" style="font-size:12px;">Sıfırla</button>
+        </div>
+      </div>
+
+      <!-- Sonuç yok -->
+      <div x-show="raporYuklendi && rapor.kalemler.length === 0"
+           style="text-align:center; padding:40px; color:var(--text-light);">
+        <span x-text="rapor.mesaj || 'Sonuç bulunamadı'"></span>
+      </div>
+
+      <!-- Özet kartları -->
+      <div x-show="raporYuklendi && rapor.kalemler.length > 0">
+        <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; margin-bottom:20px;">
+          <div style="background:var(--accent-light); border:1px solid #E8C9B8; border-radius:10px; padding:14px;">
+            <div style="font-size:11px; color:var(--accent); font-weight:700; text-transform:uppercase;">Toplam Maliyet</div>
+            <div style="font-size:20px; font-weight:800; color:var(--accent); font-family:monospace;"
+                 x-text="fmt3(rapor.ozet.toplam_usd) + ' USD'"></div>
+          </div>
+          <div style="background:var(--success-bg); border:1px solid #CBD6CC; border-radius:10px; padding:14px;">
+            <div style="font-size:11px; color:var(--success); font-weight:700; text-transform:uppercase;">Toplam Miktar</div>
+            <div style="font-size:20px; font-weight:800; color:var(--success); font-family:monospace;"
+                 x-text="fmt3(rapor.ozet.toplam_miktar) + ' ' + rapor.ozet.birim"></div>
+          </div>
+          <div style="background:var(--info-bg); border:1px solid #C4D2E6; border-radius:10px; padding:14px;">
+            <div style="font-size:11px; color:var(--info); font-weight:700; text-transform:uppercase;">Birim Maliyet</div>
+            <div style="font-size:20px; font-weight:800; color:var(--info); font-family:monospace;"
+                 x-text="fmt3(rapor.ozet.birim_maliyet_usd) + ' USD/' + rapor.ozet.birim"></div>
+          </div>
+          <div style="background:var(--warn-bg); border:1px solid #E8DCB0; border-radius:10px; padding:14px;">
+            <div style="font-size:11px; color:#8A6D1B; font-weight:700; text-transform:uppercase;">Stok / Kalem</div>
+            <div style="font-size:20px; font-weight:800; color:#8A6D1B; font-family:monospace;"
+                 x-text="rapor.ozet.stok_adedi + ' / ' + rapor.ozet.kalem_adedi"></div>
+          </div>
+        </div>
+
+        <!-- Kategori özeti -->
+        <div style="margin-bottom:20px;">
+          <div style="font-size:13px; font-weight:700; color:var(--text-main); margin-bottom:8px;">Gider Türü Dağılımı</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <template x-for="(tutar, kat) in rapor.ozet.kategori_ozet" :key="kat">
+              <div style="background:var(--bg-body); border:1px solid var(--border-soft); border-radius:8px; padding:8px 14px; font-size:12px;">
+                <span style="color:var(--text-muted);" x-text="kat + ': '"></span>
+                <strong style="font-family:monospace; color:var(--text-main);" x-text="fmt3(tutar) + ' USD'"></strong>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Kalem listesi + dışa aktarma -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <div style="font-size:13px; font-weight:700; color:var(--text-main);">Kalem Kalem Maliyetler</div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-outline" @click="raporExcel()" style="font-size:11px; padding:5px 12px; border-color:var(--success); color:var(--success);">
+              Excel
+            </button>
+            <button class="btn btn-outline" @click="raporPdf()" style="font-size:11px; padding:5px 12px; border-color:var(--accent); color:var(--accent);">
+              PDF
+            </button>
+          </div>
+        </div>
+        <div style="overflow-x:auto; border:1px solid var(--border-soft); border-radius:10px;">
+          <table class="table-crisp" style="margin:0; width:100%; table-layout:fixed;">
+            <thead style="background:var(--bg-body);">
+              <tr>
+                <th style="width:18%;">Referans No</th>
+                <th style="width:14%;">Cins</th>
+                <th style="width:20%;">Gider Türü</th>
+                <th style="width:13%;">Fatura No</th>
+                <th style="width:12%;">Tarih</th>
+                <th style="width:13%; text-align:right;">Tutar</th>
+                <th style="width:10%; text-align:right;">USD Karşılık</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="(k, i) in rapor.kalemler" :key="i">
+                <tr>
+                  <td style="font-family:monospace; font-size:12px; font-weight:600; color:var(--info); word-break:break-all; padding:8px 10px;" x-text="k.ref_no"></td>
+                  <td style="font-size:12px; padding:8px 10px;" x-text="k.cins || '—'"></td>
+                  <td style="padding:8px 10px;">
+                    <span style="font-size:11px; padding:3px 9px; border-radius:4px; font-weight:600; white-space:nowrap;"
+                          :style="k.kategori === 'Satın Alma Bedeli' ? 'background:var(--accent-light); color:var(--accent);' : (k.kategori === 'Devreden KDV' ? 'background:var(--warn-bg); color:#8A6D1B;' : 'background:var(--info-bg); color:var(--info);')"
+                          x-text="k.kategori"></span>
+                  </td>
+                  <td style="font-family:monospace; font-size:11px; color:var(--text-muted); word-break:break-all; padding:8px 10px;" x-text="k.fatura_no || '—'"></td>
+                  <td style="font-size:11px; color:var(--text-muted); padding:8px 10px;" x-text="k.tarih || '—'"></td>
+                  <td style="text-align:right; font-family:monospace; font-weight:600; white-space:nowrap; padding:8px 10px;" x-text="fmt3(k.tutar) + ' ' + k.doviz"></td>
+                  <td style="text-align:right; font-family:monospace; font-weight:700; color:var(--info); white-space:nowrap; padding:8px 10px;" x-text="fmt3(k.usd_karsilik)"></td>
+                </tr>
+              </template>
+            </tbody>
+            <tfoot>
+              <tr style="background:var(--accent-light); font-weight:800;">
+                <td colspan="6" style="text-align:right; padding:12px;">TOPLAM (USD):</td>
+                <td style="text-align:right; font-family:monospace; color:var(--accent); padding:12px;" x-text="fmt3(rapor.ozet.toplam_usd)"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:20px;">
+        <button type="button" class="btn btn-secondary" @click="mRapor=false">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bg" x-show="mTek" x-cloak @click.self="mTek=false">
+    <div class="modal" style="width:800px; max-width:96vw;">
+      <div class="modal-title">
+        <span>Yeni Maliyet Kaydı</span>
+        <span class="modal-close" @click="mTek=false">&times;</span>
+      </div>
+      <form @submit.prevent="tekKaydet()">
+        <div class="form-grid-2col">
+          <div class="form-group">
+            <label>Gider Tipi</label>
+            <select x-model="form.maliyet_tip">
+              <option>Nakliye (Ocak-Fabrika)</option>
+              <option>Gümrük/Liman Masrafı</option>
+              <option>Kesim / Fason / Üretim</option>
+              <option>Komisyon</option>
+              <option>Diğer</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Bağlantı Tipi</label>
+            <select x-model="form.baglanti_tip" @change="bagDegis()">
+              <option>Stok</option>
+              <option>Siparis</option>
+              <option>Sevkiyat</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Fatura / Belge No</label>
+            <input type="text" x-model="form.fatura_no" placeholder="Örn: ARK-2026-0042">
+          </div>
+          <div class="form-group">
+            <label>Cari Firma (Tedarikçi)</label>
+            <select x-model="form.cari_id">
+              <option value="">— Cari Bağlama (Opsiyonel) —</option>
+              <template x-for="c in cariListesi" :key="c.id">
+                <option :value="c.id" x-text="c.unvan"></option>
+              </template>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Tutar <span style="font-size:11px; color:var(--text-muted);" x-text="form.kdv_dahil_mi && form.kdv_oran > 0 ? '(KDV Dahil)' : '(Net)'"></span></label>
+            <input type="number" step="0.01" x-model="form.tutar" @input="kdvHesapla()" placeholder="0.00" required>
+          </div>
+          <div class="form-group">
+            <label>Para Birimi</label>
+            <select x-model="form.doviz">
+              <option>USD</option><option>EUR</option><option>TRY</option>
+            </select>
+          </div>
+        </div>
+        <!-- KDV Satırı -->
+        <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap; padding:12px 16px; background:var(--bg-body); border-radius:8px; border:1px solid var(--border-soft); margin-bottom:16px;">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:600; white-space:nowrap;">
+            <input type="checkbox" x-model="form.kdv_dahil_mi" @change="kdvHesapla()" style="width:16px; height:16px; margin:0;">
+            Fiyata KDV Dahil
+          </label>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label style="font-size:12px; font-weight:700; color:var(--text-muted); margin:0; white-space:nowrap;">KDV %</label>
+            <input type="number" step="0.01" min="0" max="100" x-model="form.kdv_oran" @input="kdvHesapla()"
+                   style="width:70px; padding:6px 10px; border:1px solid var(--border-mid); border-radius:var(--radius-sm);">
+          </div>
+          <div x-show="form.kdv_oran > 0 && form.tutar > 0" style="margin-left:auto; font-size:12px; color:var(--text-muted); line-height:1.8; text-align:right;">
+            <div>Net Matrah: <strong style="color:var(--text-main);" x-text="fmtOnizleme(kdvOnizleme.net) + ' ' + form.doviz"></strong></div>
+            <div>KDV Tutarı: <strong style="color:var(--success);" x-text="fmtOnizleme(kdvOnizleme.kdv) + ' ' + form.doviz"></strong></div>
+            <div x-show="kdvOnizleme.kdv > 0" style="font-size:11px; color:var(--accent); font-style:italic;">↳ KDV ayrı satır olarak işlenecek</div>
+          </div>
+        </div>
+
+        <!-- Bağlantı Seçim Alanı -->
+        <div class="baglanti-secim-alani">
+          <div style="display:flex; gap:12px; margin-bottom:12px;" x-show="form.baglanti_tip == 'Stok'">
+            <div style="flex:1;">
+              <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Stok Modeli</label>
+              <select x-model="hedefTip" @change="hedefCek()" style="width:100%; padding:10px 14px; border:1px solid var(--border-mid); border-radius:var(--radius-sm); outline:none; background:var(--bg-surface);">
+                <option>BLOK</option>
+                <option>PLAKA</option>
+                <option>EBATLI</option>
+              </select>
+            </div>
+            <div style="flex:1;" x-show="hedefTip=='EBATLI'">
+              <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Ebat Ölçüsü</label>
+              <select x-model="hFiltre.olcu" style="width:100%; padding:10px 14px; border:1px solid var(--border-mid); border-radius:var(--radius-sm); outline:none; background:var(--bg-surface);">
+                <option value="">— Ölçü Seçin —</option>
+                <template x-for="o in listeIciBenzersizOlcu" :key="o"><option :value="o" x-text="o"></option></template>
+              </select>
+            </div>
+          </div>
+          <div style="margin-bottom:12px;" x-show="['Siparis','Sevkiyat'].includes(form.baglanti_tip)">
+            <label style="font-size:11px; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.5px;">Müşteriye Göre Daralt</label>
+            <select x-model="hFiltre.musteri" style="width:100%; padding:10px 14px; border:1px solid var(--border-mid); border-radius:var(--radius-sm); outline:none; background:var(--bg-surface);">
+              <option value="">— Tüm Müşteriler —</option>
+              <template x-for="m in listeIciMusteri" :key="m"><option :value="m" x-text="m"></option></template>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:700; color:var(--primary); display:block; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Bağlanacak Blok / Referans No *</label>
+            <select x-model="form.baglanti_id" style="width:100%; padding:12px 14px; border:1px solid var(--border-mid); border-radius:var(--radius-sm); font-size:14px; outline:none; background:var(--bg-surface);" required>
+              <option value="">Lütfen Kayıt Seçiniz</option>
+              <template x-for="h in filtreliler" :key="h.id">
+                <option :value="h.id" x-text="_stokEtiket(h)"></option>
+              </template>
+            </select>
+            <div x-show="filtreliler.length === 0" style="margin-top:6px; font-size:12px; color:var(--text-light); font-style:italic;">
+              Filtreye uygun kayıt bulunamadı.
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px;">
+          <button type="button" class="btn btn-secondary" @click="mTek=false">Vazgeç</button>
+          <button type="submit" class="btn btn-primary" style="padding:10px 24px;"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Maliyeti İşle</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══════════════ TOPLU DAĞITIM MODALI ═══════════════ -->
+  <div class="modal-bg" x-show="mToplu" x-cloak @click.self="mToplu=false">
+    <div class="modal" style="width:600px; max-width:96vw;">
+      <div class="modal-title">
+        <span style="color:var(--accent);">Toplu Maliyet Girişi</span>
+        <span class="modal-close" @click="mToplu=false">&times;</span>
+      </div>
+      <form @submit.prevent="topluKaydet()">
+        <div class="form-grid-2col">
+          <div class="form-group">
+            <label>Üretim Blok Sektörü *</label>
+            <select x-model="tForm.urun_tipi" @change="urunTipiDegisti()" required>
+              <option value="">Seçiniz</option>
+              <option value="BLOK">BLOK Hacmi</option>
+              <option value="PLAKA">PLAKA Metrajı</option>
+              <option value="EBATLI">EBATLI (Kasa)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Blok / Kasa Referans Kodu *</label>
+            <select x-model="tForm.blok_no" required :disabled="!tForm.urun_tipi">
+              <option value="">Seçiniz</option>
+              <!-- EBATLI: parti (kök) seçenekleri -->
+              <optgroup label="Parti (Tüm Kasalar)" x-show="partiKokListesi.length > 0">
+                <template x-for="p in partiKokListesi" :key="'parti-'+p">
+                  <option :value="p" x-text="p + '  (tüm parti)'"></option>
+                </template>
+              </optgroup>
+              <!-- Tekil kasalar / bloklar -->
+              <optgroup :label="tForm.urun_tipi === 'EBATLI' ? 'Tekil Kasalar' : 'Bloklar'">
+                <template x-for="b in blokNoListesi" :key="b"><option :value="b" x-text="b"></option></template>
+              </optgroup>
+            </select>
+            <div x-show="tForm.urun_tipi === 'EBATLI'" style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+              Parti seçerseniz o partiye ait tüm kasalara oransal dağıtılır.
+            </div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:20px;">
+          <label>Hedef Stok Dağılım Kapsamı *</label>
+          <select x-model="tForm.hedef" style="width:100%;">
+            <option value="hepsi">Tümü (Serbest + Satılmış Arşivi)</option>
+            <option value="serbest">Sadece Depodakiler (Serbest/Rezerve)</option>
+            <option value="satilmis">Sadece Satılmış / Teslim Edilmiş Olanlar</option>
+          </select>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:6px; line-height:1.4;">
+            Satılmış ürünlere maliyet yansıtılırsa ilgili siparişlerin net kârlılığı sistemde otomatik olarak revize edilir.
+          </div>
+        </div>
+        <div class="form-grid-2col">
+          <div class="form-group">
+            <label>Gider Tipi</label>
+            <select x-model="tForm.maliyet_tip" style="width:100%;">
+              <option>Nakliye (Ocak-Fabrika)</option>
+              <option>Gümrük/Liman Masrafı</option>
+              <option>Kesim / Fason / Üretim</option>
+              <option>Komisyon</option>
+              <option>Diğer</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Fatura / Belge No</label>
+            <input type="text" x-model="tForm.fatura_no" placeholder="Örn: ARK-2026-0042">
+          </div>
+          <div class="form-group">
+            <label>Cari Firma (Tedarikçi)</label>
+            <select x-model="tForm.cari_id">
+              <option value="">— Cari Bağlama (Opsiyonel) —</option>
+              <template x-for="c in cariListesi" :key="c.id">
+                <option :value="c.id" x-text="c.unvan"></option>
+              </template>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Para Birimi *</label>
+            <select x-model="tForm.doviz" required>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="TRY">TRY</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Toplam Tutar * <span style="font-size:11px; color:var(--text-muted);" x-text="tForm.kdv_dahil_mi && tForm.kdv_oran > 0 ? '(KDV Dahil)' : '(Net)'"></span></label>
+            <input type="number" step="0.01" x-model="tForm.tutar" @input="tKdvHesapla()" required placeholder="0.00">
+          </div>
+        </div>
+        <!-- KDV Satırı - Toplu -->
+        <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap; padding:12px 16px; background:var(--bg-body); border-radius:8px; border:1px solid var(--border-soft); margin-bottom:16px;">
+          <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; font-weight:600; white-space:nowrap;">
+            <input type="checkbox" x-model="tForm.kdv_dahil_mi" @change="tKdvHesapla()" style="width:16px; height:16px; margin:0;">
+            Fiyata KDV Dahil
+          </label>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <label style="font-size:12px; font-weight:700; color:var(--text-muted); margin:0; white-space:nowrap;">KDV %</label>
+            <input type="number" step="0.01" min="0" max="100" x-model="tForm.kdv_oran" @input="tKdvHesapla()"
+                   style="width:70px; padding:6px 10px; border:1px solid var(--border-mid); border-radius:var(--radius-sm);">
+          </div>
+          <div x-show="tForm.kdv_oran > 0 && tForm.tutar > 0" style="margin-left:auto; font-size:12px; color:var(--text-muted); line-height:1.8; text-align:right;">
+            <div>Net Matrah: <strong style="color:var(--text-main);" x-text="fmtOnizleme(tKdvOnizleme.net) + ' ' + tForm.doviz"></strong></div>
+            <div>KDV Tutarı: <strong style="color:var(--success);" x-text="fmtOnizleme(tKdvOnizleme.kdv) + ' ' + tForm.doviz"></strong></div>
+            <div x-show="tKdvOnizleme.kdv > 0" style="font-size:11px; color:var(--accent); font-style:italic;">↳ Her stoğa oransal KDV + cari alacak kaydı oluşturulacak</div>
+          </div>
+        </div>
+
+        <div class="info-box" x-show="blokSilinecekAdet > 0">
+          Belirtilen blok numarasına ait <strong><span x-text="blokSilinecekAdet"></span></strong> adet uygun kayıt bulundu.
+          Girilen <strong><span x-text="(tForm.tutar || 0) + ' ' + tForm.doviz"></span></strong> maliyet bu ürünlerin ölçülerine (hacim/metraj) göre oransal olarak yüzdelendirilecektir.
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px;">
+          <button type="button" class="btn btn-secondary" @click="mToplu=false">İptal</button>
+          <button type="submit" class="btn btn-primary" style="padding:10px 24px;">Dağıtımı Başlat</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══════════════ MALİYET DÜZENLE MODALI ═══════════════ -->
+  <div class="modal-bg" x-show="mDuzenle" x-cloak @click.self="mDuzenle=false">
+    <div class="modal" style="width:500px">
+      <div class="modal-title">
+        <span>Maliyet Verisi Güncelleme</span>
+        <span class="modal-close" @click="mDuzenle=false">&times;</span>
+      </div>
+      <form @submit.prevent="maliyetGuncelle()">
+        <div class="form-group" style="margin-bottom:16px;">
+          <label>Gider Tipi Sınıflandırması</label>
+          <select x-model="duzenleForm.maliyet_tip" style="width:100%;">
+            <option>Nakliye (Ocak-Fabrika)</option>
+            <option>Gümrük/Liman Masrafı</option>
+            <option>Kesim / Fason / Üretim</option>
+            <option>Komisyon</option>
+            <option>Diğer</option>
+          </select>
+        </div>
+        <div class="form-grid-2col" style="margin-bottom:16px;">
+          <div class="form-group"><label>Tutar (Net)</label><input type="number" step="0.01" x-model="duzenleForm.tutar" required></div>
+          <div class="form-group"><label>Döviz</label><select x-model="duzenleForm.doviz"><option>USD</option><option>EUR</option><option>TRY</option></select></div>
+        </div>
+        <div x-show="duzenleForm._kdv_var" style="background:var(--warn-bg); border:1px solid #E8DCB0; border-radius:8px; padding:10px 14px; font-size:11px; color:#8A6D1B; line-height:1.6; margin-bottom:20px;">
+          Bu maliyetin <strong>KDV kaydı</strong> mevcut. Net tutarı değiştirdiğinizde KDV de aynı oranda otomatik güncellenecek, bağlı cari hareket de yenilenecektir.
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:12px;">
+          <button type="button" class="btn btn-secondary" @click="mDuzenle=false">Vazgeç</button>
+          <button type="submit" class="btn btn-primary"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> Yeni Değeri İşle</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function maliApp() {
+  return {
+    rows: [],
+    seciliIds: [],
+    tumSecili: false,
+    mTek: false,
+    mToplu: false,
+    mDuzenle: false,
+    mRapor: false,
+    raporRef: '',
+    raporYuklendi: false,
+    rapor: { kalemler: [], stoklar: [], ozet: {}, mesaj: '' },
+    rFiltre: { stok_tip: '', uretici: '', cins: '', kok: '' },
+    raporStokHavuzu: [],
+    hedefTip: 'PLAKA',
+    hedefListesi: [],
+    hFiltre: { olcu: '', musteri: '' },
+    form:  { maliyet_tip: 'Nakliye (Ocak-Fabrika)', baglanti_tip: 'Stok', baglanti_id: '', tutar: '', doviz: 'USD', fatura_no: '', cari_id: '', kdv_dahil_mi: false, kdv_oran: 20 },
+    tForm: { urun_tipi: '', blok_no: '', maliyet_tip: 'Nakliye (Ocak-Fabrika)', hedef: 'hepsi', tutar: '', doviz: 'USD', fatura_no: '', cari_id: '', kdv_dahil_mi: false, kdv_oran: 20 },
+    kdvOnizleme:  { net: 0, kdv: 0 },
+    tKdvOnizleme: { net: 0, kdv: 0 },
+    cariListesi: [],
+    duzenleForm: { id: '', maliyet_tip: '', tutar: '', doviz: 'USD', _kdv_var: false },
+    blokNoListesi: [],
+    partiKokListesi: [],
+    filtre: { maliyet_tip: '', stok_tip: '', uretici: '', cins: '', fatura_no: '', blok_ref_no: '', baglanti_tip: '', baglanti_id: '', bas_tarih: '', bit_tarih: '', pasifler_dahil: false, satin_alma_goster: true },
+    dovizKurlari: { USD: 1, EUR: 1.08, TRY: 35 },
+
+    fmt3(n) {
+      const v = parseFloat(n) || 0;
+      return v.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+    },
+
+    get listeIciBenzersizOlcu() {
+      const set = new Set();
+      this.hedefListesi.forEach(i => {
+        let olcu = `${i.boy || 0}x${i.yukseklik || 0}`;
+        if (i.kalinlik) olcu += `x${i.kalinlik}`;
+        set.add(olcu);
+      });
+      return Array.from(set).sort();
+    },
+    get listeIciMusteri() {
+      const set = new Set();
+      this.hedefListesi.forEach(i => { if (i.musteri) set.add(i.musteri); });
+      return Array.from(set).sort();
+    },
+    _stokEtiket(h) {
+      // Kullanıcı blok/referans no ile takip etsin (ID arka planda kalır)
+      const tip = (h.tip || h.stok_tip || '').toUpperCase();
+      let ref = '';
+      if (tip === 'EBATLI') {
+        ref = h.kasa_no || h.referans_kodu || h.id;
+      } else {
+        ref = h.blok_no || h.id;
+      }
+      let etiket = ref || h.id;
+      if (h.cins) etiket += ' · ' + h.cins;
+      if (h.musteri) etiket += ' (' + h.musteri + ')';
+      return etiket;
+    },
+
+    get filtreliler() {
+      let l = this.hedefListesi;
+      if (this.hFiltre.olcu) {
+        l = l.filter(x => `${x.boy || 0}x${x.yukseklik || 0}` + (x.kalinlik ? `x${x.kalinlik}` : '') === this.hFiltre.olcu);
+      }
+      if (this.hFiltre.musteri) l = l.filter(x => x.musteri === this.hFiltre.musteri);
+      return l;
+    },
+    // ── CASCADE FİLTRELEME ─────────────────────────────────────────────────
+    // Filtre sırası: maliyet_tip → stok_tip → uretici → cins → fatura_no → blok_ref_no → baglanti_tip → tarih
+    // Her dropdown, kendisinden önceki filtrelerin uygulandığı subset'ten hesaplanır.
+    // filtreDegisti() üst filtre değişince alt seçimleri sıfırlar.
+
+    _bf(kadar) {
+      const sira = ['maliyet_tip','stok_tip','uretici','cins','fatura_no','blok_ref_no','baglanti_tip','bas_tarih','bit_tarih'];
+      let f = this.rows;
+      for (let i = 0; i < sira.length && i < kadar; i++) {
+        const k = sira[i];
+        if (!this.filtre[k]) continue;
+        if (k === 'bas_tarih') { f = f.filter(r => r.maliyet_tarihi >= this.filtre.bas_tarih); continue; }
+        if (k === 'bit_tarih') { f = f.filter(r => r.maliyet_tarihi <= this.filtre.bit_tarih); continue; }
+        f = f.filter(r => (r[k] || '') === this.filtre[k]);
+      }
+      return f;
+    },
+
+    _uniq(rows, field) {
+      return [...new Set(rows.map(r => r[field] || '').filter(Boolean))].sort();
+    },
+
+    filtreDegisti(degisen) {
+      // Üst filtre değişince alt filtrelerin seçimlerini sıfırla
+      const sira = ['maliyet_tip','stok_tip','uretici','cins','fatura_no','blok_ref_no','baglanti_tip'];
+      const idx = sira.indexOf(degisen);
+      for (let i = idx + 1; i < sira.length; i++) this.filtre[sira[i]] = '';
+    },
+
+    // Her getter kendi sıra numarasına kadar önceki filtreleri uygular
+    get cascadeMaliyet_tipler() { return this._uniq(this.rows, 'maliyet_tip'); },           // 0: tüm rows
+    get cascadeStok_tipler()    { return this._uniq(this._bf(1), 'stok_tip'); },             // maliyet_tip sonrası
+    get cascadeUreticiler()     { return this._uniq(this._bf(2), 'uretici'); },              // + stok_tip sonrası
+    get cascadeCinsler()        { return this._uniq(this._bf(3), 'cins'); },                 // + uretici sonrası
+    get cascadeFatura_nolar()   { return this._uniq(this._bf(4), 'fatura_no'); },            // + cins sonrası
+    get cascadeBlok_ref_nolar() { return this._uniq(this._bf(5), 'blok_ref_no'); },          // + fatura_no sonrası
+    get cascadeBaglanti_tipler(){ return this._uniq(this._bf(6), 'baglanti_tip'); },         // + blok_ref_no sonrası
+
+    get benzersizBaglantiIdListesi() {
+      // Tüm filtreler uygulanmış set'ten benzersiz bağlantı ID'leri
+      return this._uniq(this._bf(9), 'baglanti_id');
+    },
+
+    get filtrelenmisRows() {
+      let f = this._bf(9);  // tüm cascade filtreler uygulanmış
+      // Satın alma bedelleri toggle'ı kapalıysa sanal satırları gizle
+      if (!this.filtre.satin_alma_goster) {
+        f = f.filter(r => !r.satin_alma);
+      }
+      return f;
+    },
+    get blokSilinecekAdet() {
+      if (!this.tForm.blok_no) return 0;
+      const sec = this.tForm.blok_no;
+      return this.hedefListesi.filter(x => {
+        const bn = x.kasa_no || x.blok_no || '';
+        // Tam eşleşme VEYA parti kökü eşleşmesi
+        return bn === sec || bn.startsWith(sec + '-');
+      }).length;
+    },
+
+    _kdvHesapla(tutar, oran, dahilMi) {
+      const t = parseFloat(tutar) || 0;
+      const o = parseFloat(oran) || 0;
+      if (t <= 0 || o <= 0) return { net: t, kdv: 0 };
+      if (dahilMi) {
+        const net = t / (1 + o / 100);
+        return { net: Math.round(net * 1000) / 1000, kdv: Math.round((t - net) * 1000) / 1000 };
+      }
+      return { net: t, kdv: Math.round(t * o / 100 * 1000) / 1000 };
+    },
+
+    kdvHesapla()  { this.kdvOnizleme  = this._kdvHesapla(this.form.tutar,  this.form.kdv_oran,  this.form.kdv_dahil_mi);  },
+    tKdvHesapla() { this.tKdvOnizleme = this._kdvHesapla(this.tForm.tutar, this.tForm.kdv_oran, this.tForm.kdv_dahil_mi); },
+
+    fmtOnizleme(n) {
+      return (parseFloat(n) || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+    },
+
+    async _cariYukle() {
+      try {
+        const d = await fetch('/api/cari').then(r => r.json());
+        this.cariListesi = (d.data || d || []).filter(c => c.cari_tip === 'Tedarikçi' || c.cari_tip === 'Üretici' || c.urun_tedarikcisi);
+      } catch(e) { this.cariListesi = []; }
+    },
+
+    hesaplaUsdKarsilik(tutar, doviz) {
+      if (!tutar || tutar == 0) return '—';
+      let usdDeger = 0;
+      if (doviz === 'USD') usdDeger = parseFloat(tutar);
+      else if (doviz === 'EUR') usdDeger = parseFloat(tutar) * this.dovizKurlari.EUR;
+      else if (doviz === 'TRY') usdDeger = parseFloat(tutar) / this.dovizKurlari.TRY;
+      else return '—';
+      return this.fmt3(usdDeger) + ' $';
+    },
+
+    getTipBadgeStyle(tip) {
+      const t = tip || '';
+      if (t.includes('Nakliye')) return 'background: var(--info-bg); color: var(--info);';
+      if (t.includes('Gümrük') || t.includes('Liman')) return 'background: var(--warn-bg); color: #8A6D1B;';
+      if (t.includes('Kesim') || t.includes('Fason') || t.includes('Üretim')) return 'background: var(--success-bg); color: var(--success);';
+      if (t.includes('Komisyon')) return 'background: var(--info-bg); color: var(--info);';
+      if (t.includes('Devreden KDV')) return 'background: var(--warn-bg); color: #8A6D1B;';
+      if (t.includes('Iade KDV')) return 'background: var(--success-bg); color: var(--success);';
+      return 'background: var(--border-soft); color: var(--text-muted);';
+    },
+
+    async init() {
+      try {
+        const kurRes = await fetch('/api/doviz_kur');
+        const kurlar = await kurRes.json();
+        const usdTry = kurlar.USD?.efektif || 35;
+        const eurTry = kurlar.EUR?.efektif || 38;
+        this.dovizKurlari = { USD: 1, EUR: eurTry / usdTry, TRY: usdTry };
+      } catch(e) {
+        // Kur çekilemezse son bilinen oranlar (yalnızca arayüz tahmini, hesaplar sunucuda)
+        this.dovizKurlari = { USD: 1, EUR: 1.08, TRY: 35 };
+      }
+      try {
+        const params = new URLSearchParams();
+        if (this.filtre.pasifler_dahil) params.set('pasifler', '1');
+        // Satın alma satırları sadece toggle açıkken sunucudan istenir (performans)
+        params.set('satin_alma', this.filtre.satin_alma_goster ? '1' : '0');
+        const res = await fetch('/api/maliyet?' + params.toString());
+        this.rows = await res.json() || [];
+      } catch(e) {
+        Utils.error('Maliyet listesi yüklenemedi: ' + e.message);
+        this.rows = [];
+      }
+    },
+
+    filtreleriTemizle() {
+      const pasif = this.filtre.pasifler_dahil;
+      const saGoster = this.filtre.satin_alma_goster;
+      this.filtre = {
+        maliyet_tip: '', stok_tip: '', uretici: '', cins: '',
+        fatura_no: '', blok_ref_no: '', baglanti_tip: '', baglanti_id: '',
+        bas_tarih: '', bit_tarih: '', pasifler_dahil: pasif,
+        satin_alma_goster: saGoster
+      };
+    },
+
+    baglantiTipiDegisti() {
+      this.filtre.baglanti_id = '';
+    },
+
+    tekAc() {
+      this.form = { maliyet_tip: 'Nakliye (Ocak-Fabrika)', baglanti_tip: 'Stok', baglanti_id: '', tutar: '', doviz: 'USD', fatura_no: '', cari_id: '', kdv_dahil_mi: false, kdv_oran: 20 };
+      this.kdvOnizleme = { net: 0, kdv: 0 };
+      if (!this.cariListesi.length) this._cariYukle();
+      this.hFiltre = { olcu: '', musteri: '' };
+      this.mTek = true;
+      this.bagDegis();
+    },
+
+    topluAc() {
+      this.tForm = { urun_tipi: '', blok_no: '', maliyet_tip: 'Nakliye (Ocak-Fabrika)', hedef: 'hepsi', tutar: '', doviz: 'USD', fatura_no: '', cari_id: '', kdv_dahil_mi: false, kdv_oran: 20 };
+      this.tKdvOnizleme = { net: 0, kdv: 0 };
+      if (!this.cariListesi.length) this._cariYukle();
+      this.blokNoListesi = [];
+      this.hedefListesi = [];
+      this.mToplu = true;
+    },
+
+    tekDuzenle(r) {
+      // Bu maliyetin grubunda KDV kaydı var mı? (uyarı için)
+      const kdvVar = r.grup_id ? this.rows.some(x => x.grup_id === r.grup_id && x.maliyet_tip === 'Devreden KDV') : false;
+      this.duzenleForm = { id: r.id, maliyet_tip: r.maliyet_tip, tutar: r.tutar, doviz: r.doviz || 'USD', _kdv_var: kdvVar };
+      this.mDuzenle = true;
+    },
+
+    async maliyetGuncelle() {
+      try {
+        const res = await fetch('/api/maliyet/' + this.duzenleForm.id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.duzenleForm)
+        });
+        const d = await res.json();
+        if (d.ok) {
+          this.mDuzenle = false;
+          await this.init();
+          Utils.success('Maliyet güncellendi!');
+        } else Utils.error(d.mesaj || 'Güncelleme hatası');
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    // ── MALİYET RAPORU ──────────────────────────────────────────────
+    get raporKokListesi() {
+      // Mevcut maliyet kayıtlarındaki blok/ref no'lardan kök listesi üret.
+      // EBATLI ise kasa ekini at, diğerlerinde olduğu gibi bırak.
+      const kokler = new Set();
+      this.rows.forEach(r => {
+        const rn = r.blok_ref_no || '';
+        if (!rn) return;
+        const kok = (r.stok_tip === 'EBATLI') ? rn.replace(/-\d+$/, '') : rn;
+        if (kok) kokler.add(kok);
+      });
+      return [...kokler].sort();
+    },
+
+    async raporAc() {
+      this.mRapor = true;
+      this.raporYuklendi = false;
+      this.rapor = { kalemler: [], stoklar: [], ozet: {}, mesaj: '' };
+      this.rFiltre = { stok_tip: '', uretici: '', cins: '', kok: '' };
+      this.raporRef = '';
+      // Cascade filtreler için tüm stokları çek (tip, üretici, cins, kök bilgisi)
+      try {
+        const tipler = ['BLOK', 'PLAKA', 'EBATLI'];
+        const havuz = [];
+        for (const tip of tipler) {
+          const d = await fetch('/api/stok?tip=' + tip + '&per_page=2000').then(r => r.json());
+          const items = d.data || d || [];
+          items.forEach(it => {
+            const refNo = it.blok_no || it.kasa_no || '';
+            // Kök SADECE EBATLI'da kasa ekini (-N) atarak hesaplanır.
+            // BLOK/PLAKA'da blok_no doğrudan kök kabul edilir (kesme yapılmaz).
+            const kok = (tip === 'EBATLI') ? refNo.replace(/-\d+$/, '') : refNo;
+            havuz.push({
+              stok_tip: tip, uretici: it.uretici || '', cins: it.cins || '',
+              ref_no: refNo, kok: kok || refNo
+            });
+          });
+        }
+        this.raporStokHavuzu = havuz;
+      } catch(e) { this.raporStokHavuzu = []; }
+    },
+
+    // ── RAPOR CASCADE FİLTRELER ──────────────────────────────────────
+    _rBf(kadar) {
+      const sira = ['stok_tip', 'uretici', 'cins', 'kok'];
+      let f = this.raporStokHavuzu;
+      for (let i = 0; i < sira.length && i < kadar; i++) {
+        const k = sira[i];
+        if (!this.rFiltre[k]) continue;
+        f = f.filter(r => (r[k] || '') === this.rFiltre[k]);
+      }
+      return f;
+    },
+    _rUniq(rows, field) {
+      return [...new Set(rows.map(r => r[field] || '').filter(Boolean))].sort();
+    },
+    get rCascadeStokTipler() { return this._rUniq(this.raporStokHavuzu, 'stok_tip'); },
+    get rCascadeUreticiler() { return this._rUniq(this._rBf(1), 'uretici'); },
+    get rCascadeCinsler()    { return this._rUniq(this._rBf(2), 'cins'); },
+    get rCascadeKokler()     { return this._rUniq(this._rBf(3), 'kok'); },
+
+    rFiltreDegisti(degisen) {
+      const sira = ['stok_tip', 'uretici', 'cins', 'kok'];
+      const idx = sira.indexOf(degisen);
+      for (let i = idx + 1; i < sira.length; i++) this.rFiltre[sira[i]] = '';
+      // Kök seçilince doğrudan rapora yansıt
+      if (degisen === 'kok' && this.rFiltre.kok) {
+        this.raporRef = this.rFiltre.kok;
+      }
+    },
+
+    rFiltreTemizle() {
+      this.rFiltre = { stok_tip: '', uretici: '', cins: '', kok: '' };
+      this.raporRef = '';
+      this.raporYuklendi = false;
+      this.rapor = { kalemler: [], stoklar: [], ozet: {}, mesaj: '' };
+    },
+
+    async raporCalistir() {
+      const ref = (this.raporRef || this.rFiltre.kok || '').trim();
+      const params = new URLSearchParams();
+      if (ref) params.set('ref', ref);
+      if (this.rFiltre.stok_tip) params.set('stok_tip', this.rFiltre.stok_tip);
+      if (this.rFiltre.uretici)  params.set('uretici', this.rFiltre.uretici);
+      if (this.rFiltre.cins)     params.set('cins', this.rFiltre.cins);
+      if (!ref && !this.rFiltre.stok_tip && !this.rFiltre.uretici && !this.rFiltre.cins) {
+        Utils.error('En az bir filtre seçin veya kök referans girin'); return;
+      }
+      try {
+        const d = await fetch('/api/maliyet/rapor?' + params.toString()).then(r => r.json());
+        if (d.ok) {
+          this.rapor = d;
+          this.raporYuklendi = true;
+        } else {
+          Utils.error(d.mesaj || 'Rapor alınamadı');
+        }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    // ── DIŞA AKTARMA ────────────────────────────────────────────────
+    raporBaslik() {
+      const p = [];
+      if (this.rapor.ref && this.rapor.ref !== '(filtre)') p.push(this.rapor.ref);
+      if (this.rFiltre.stok_tip) p.push(this.rFiltre.stok_tip);
+      if (this.rFiltre.uretici)  p.push(this.rFiltre.uretici);
+      if (this.rFiltre.cins)     p.push(this.rFiltre.cins);
+      return p.join('_') || 'maliyet_raporu';
+    },
+
+    raporExcel() {
+      if (!this.rapor.kalemler || this.rapor.kalemler.length === 0) { Utils.error('Önce rapor getirin'); return; }
+      // Sunucu tarafında gerçek .xlsx üret (openpyxl)
+      const ref = (this.raporRef || this.rFiltre.kok || '').trim();
+      const params = new URLSearchParams();
+      if (ref) params.set('ref', ref);
+      if (this.rFiltre.stok_tip) params.set('stok_tip', this.rFiltre.stok_tip);
+      if (this.rFiltre.uretici)  params.set('uretici', this.rFiltre.uretici);
+      if (this.rFiltre.cins)     params.set('cins', this.rFiltre.cins);
+      // Tarayıcıyı indirme URL'sine yönlendir (dosya iner)
+      window.location.href = '/api/maliyet/rapor/excel?' + params.toString();
+      Utils.success('Excel (.xlsx) dosyası hazırlanıyor');
+    },
+
+    raporPdf() {
+      if (!this.rapor.kalemler || this.rapor.kalemler.length === 0) { Utils.error('Önce rapor getirin'); return; }
+      // Yazdırılabilir HTML penceresi aç → kullanıcı PDF olarak kaydeder
+      const oz = this.rapor.ozet;
+      const baslik = this.rapor.ref && this.rapor.ref !== '(filtre)' ? this.rapor.ref : 'Filtreli Rapor';
+      const tarih = new Date().toLocaleDateString('tr-TR');
+      let katOzet = '';
+      for (const [kat, tutar] of Object.entries(oz.kategori_ozet || {})) {
+        katOzet += '<span style="display:inline-block; margin:2px 8px 2px 0; padding:3px 10px; background:#EAE7DF; border-radius:4px; font-size:11px;">' +
+                   kat + ': <strong>' + this.fmt3(tutar) + ' USD</strong></span>';
+      }
+      const satirlar = this.rapor.kalemler.map(k =>
+        '<tr><td>' + k.ref_no + '</td><td>' + (k.cins||'—') + '</td><td>' + k.kategori +
+        '</td><td>' + (k.fatura_no||'—') + '</td><td>' + (k.tarih||'—') +
+        '</td><td style="text-align:right;">' + this.fmt3(k.tutar) + ' ' + k.doviz +
+        '</td><td style="text-align:right;">' + this.fmt3(k.usd_karsilik) + '</td></tr>'
+      ).join('');
+
+      const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Maliyet Raporu</title>' +
+        '<style>body{font-family:Arial,sans-serif;padding:30px;color:#282B28;}' +
+        'h1{font-size:20px;color:#C05A36;margin:0 0 4px;}.sub{color:#6F6E68;font-size:13px;margin-bottom:20px;}' +
+        '.ozet{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}' +
+        '.kart{border:1px solid #EAE7DF;border-radius:8px;padding:10px 16px;}' +
+        '.kart .l{font-size:10px;color:#6F6E68;text-transform:uppercase;}' +
+        '.kart .v{font-size:16px;font-weight:800;font-family:monospace;}' +
+        'table{width:100%;border-collapse:collapse;margin-top:12px;font-size:12px;}' +
+        'th,td{border:1px solid #e2e8f0;padding:6px 8px;text-align:left;}' +
+        'th{background:#F2EFE8;font-size:11px;}tfoot td{font-weight:800;background:#F3E3D8;}' +
+        '@media print{button{display:none;}}</style></head><body>' +
+        '<h1>Toplu Maliyet Raporu</h1>' +
+        '<div class="sub">Referans: <strong>' + baslik + '</strong> · Tarih: ' + tarih + '</div>' +
+        '<div class="ozet">' +
+          '<div class="kart"><div class="l">Toplam Maliyet</div><div class="v" style="color:#C05A36;">' + this.fmt3(oz.toplam_usd) + ' USD</div></div>' +
+          '<div class="kart"><div class="l">Toplam Miktar</div><div class="v" style="color:#4A5D4E;">' + this.fmt3(oz.toplam_miktar) + ' ' + (oz.birim||'') + '</div></div>' +
+          '<div class="kart"><div class="l">Birim Maliyet</div><div class="v" style="color:#4A6FA5;">' + this.fmt3(oz.birim_maliyet_usd) + ' USD/' + (oz.birim||'') + '</div></div>' +
+          '<div class="kart"><div class="l">Stok / Kalem</div><div class="v" style="color:#8A6D1B;">' + oz.stok_adedi + ' / ' + oz.kalem_adedi + '</div></div>' +
+        '</div>' +
+        '<div style="margin-bottom:14px;">' + katOzet + '</div>' +
+        '<table><thead><tr><th>Referans No</th><th>Cins</th><th>Gider Türü</th><th>Fatura No</th><th>Tarih</th><th style="text-align:right;">Tutar</th><th style="text-align:right;">USD</th></tr></thead>' +
+        '<tbody>' + satirlar + '</tbody>' +
+        '<tfoot><tr><td colspan="6" style="text-align:right;">TOPLAM (USD):</td><td style="text-align:right;">' + this.fmt3(oz.toplam_usd) + '</td></tr></tfoot></table>' +
+        '<button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#232824;color:#fff;border:none;border-radius:6px;cursor:pointer;">Yazdır / PDF Kaydet</button>' +
+        '</body></html>';
+
+      const w = window.open('', '_blank');
+      w.document.write(html);
+      w.document.close();
+    },
+
+    toggleTumunuSec(val) {
+      this.tumSecili = val;
+      // Satın alma sanal satırları seçime dahil edilmez
+      this.seciliIds = val ? this.filtrelenmisRows.filter(r => !r.satin_alma).map(r => r.id) : [];
+    },
+
+    async seciliSil() {
+      if (this.seciliIds.length === 0) return;
+      const onay = await Utils.confirmSil('Maliyet Kayıtlarını Sil', {
+        mesaj: `Seçili ${this.seciliIds.length} adet maliyet kaydı silinecek.`,
+        detail: 'Bağlı <strong>cari hareket</strong> kayıtları da otomatik silinecek. Bu işlem geri alınamaz.',
+      });
+      if (!onay) return;
+      let silinen = 0, hata = 0;
+      for (const id of this.seciliIds) {
+        try {
+          const r = await fetch('/api/maliyet/' + id, { method: 'DELETE' }).then(r => r.json());
+          if (r.ok) silinen++; else hata++;
+        } catch(e) { hata++; }
+      }
+      if (silinen > 0) Utils.success(silinen + ' maliyet silindi' + (hata > 0 ? `, ${hata} silinemedi` : ''));
+      if (hata > 0 && silinen === 0) Utils.error(hata + ' kayıt silinemedi');
+      this.seciliIds = [];
+      this.tumSecili = false;
+      await this.init();
+    },
+
+    async maliyetSil(id) {
+      const r = this.rows.find(r => r.id === id) || {};
+      const onay = await Utils.confirmSil('Maliyet Kaydını Sil', {
+        mesaj: `"${r.maliyet_tip || id}" — ${r.baglanti_id || ''} bu maliyet kaydını silmek istediğinize emin misiniz?`,
+        detail: 'Bağlı <strong>cari hareket</strong> kaydı da otomatik silinecek.',
+      });
+      if (!onay) return;
+      try {
+        const res = await fetch('/api/maliyet/' + id, { method: 'DELETE' }).then(r => r.json());
+        if (res.ok) {
+          Utils.success(res.mesaj || 'Maliyet silindi');
+          await this.init();
+        } else { Utils.error(res.mesaj || 'Silinemedi'); }
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async urunTipiDegisti() {
+      if (!this.tForm.urun_tipi) {
+        this.blokNoListesi = [];
+        this.partiKokListesi = [];
+        this.hedefListesi = [];
+        return;
+      }
+      try {
+        const url = '/api/stok?tip=' + this.tForm.urun_tipi + '&per_page=1000';
+        const res = await fetch(url);
+        const data = await res.json();
+        const items = data.data || data || [];
+        const benzersizBloklar = new Set();
+        const partiKokler = new Set();
+        items.forEach(item => {
+          const blokNo = item.blok_no || item.kasa_no;
+          if (blokNo && blokNo.trim() !== '') {
+            benzersizBloklar.add(blokNo);
+            // EBATLI: son '-N' ekini atarak parti kökü üret
+            if (this.tForm.urun_tipi === 'EBATLI') {
+              const kok = blokNo.replace(/-\d+$/, '');
+              // Sadece gerçekten ek varsa (kök ≠ kasa_no) parti say
+              if (kok && kok !== blokNo) partiKokler.add(kok);
+            }
+          }
+        });
+        this.blokNoListesi = Array.from(benzersizBloklar).sort();
+        // Bir kökte birden fazla kasa varsa parti olarak göster
+        this.partiKokListesi = Array.from(partiKokler).filter(kok => {
+          const adet = items.filter(it => {
+            const bn = it.kasa_no || it.blok_no || '';
+            return bn === kok || bn.startsWith(kok + '-');
+          }).length;
+          return adet > 1;  // en az 2 kasa varsa parti
+        }).sort();
+        this.hedefListesi = items;
+      } catch(e) {
+        Utils.error('Stok listesi yüklenemedi: ' + e.message);
+        this.blokNoListesi = [];
+        this.hedefListesi = [];
+      }
+    },
+
+    async bagDegis() {
+      this.hFiltre = { olcu: '', musteri: '' };
+      try {
+        if (this.form.baglanti_tip === 'Stok') {
+          await this.hedefCek();
+        } else if (this.form.baglanti_tip === 'Siparis') {
+          const res = await fetch('/api/siparis?per_page=1000');
+          const data = await res.json();
+          this.hedefListesi = data.data || data || [];
+        } else {
+          const res = await fetch('/api/sevkiyat');
+          this.hedefListesi = await res.json() || [];
+        }
+      } catch(e) {
+        Utils.error('Liste yüklenemedi: ' + e.message);
+        this.hedefListesi = [];
+      }
+    },
+
+    async hedefCek() {
+      try {
+        const res = await fetch('/api/stok?tip=' + this.hedefTip + '&per_page=1000');
+        const data = await res.json();
+        this.hedefListesi = data.data || data || [];
+      } catch(e) {
+        Utils.error('Stok listesi yüklenemedi: ' + e.message);
+        this.hedefListesi = [];
+      }
+    },
+
+    async tekKaydet() {
+      if (!this.form.baglanti_id) { Utils.error('Lütfen bir stok/sipariş/sevkiyat seçin'); return; }
+      if (!this.form.tutar || this.form.tutar <= 0) { Utils.error('Geçerli bir tutar girin'); return; }
+      try {
+        const res = await fetch('/api/maliyet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.form)
+        });
+        const d = await res.json();
+        if (d.ok) {
+          this.mTek = false;
+          await this.init();
+          Utils.success(d.mesaj || 'Maliyet kaydedildi!');
+        } else Utils.error(d.mesaj || 'Hata oluştu');
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async topluKaydet() {
+      if (!this.tForm.urun_tipi) { Utils.error('Ürün Tipi seçiniz'); return; }
+      if (!this.tForm.blok_no) { Utils.error('Blok No seçiniz'); return; }
+      if (!this.tForm.tutar || this.tForm.tutar <= 0) { Utils.error('Geçerli bir tutar giriniz'); return; }
+      if (!this.tForm.doviz) { Utils.error('Döviz seçiniz'); return; }
+      try {
+        const res = await fetch('/api/maliyet/blok_dagilim', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(this.tForm)
+        });
+        const d = await res.json();
+        if (d.ok) {
+          Utils.success(d.mesaj || (d.adet + ' ürüne maliyet dağıtıldı'));
+          this.mToplu = false;
+          await this.init();
+        } else Utils.error(d.mesaj || 'Hata oluştu');
+      } catch(e) { Utils.error('Hata: ' + e.message); }
+    }
+  };
+}
+</script>
+{% endblock %}

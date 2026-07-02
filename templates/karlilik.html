@@ -1,0 +1,521 @@
+{% extends "base.html" %}
+{% block title %}Karlılık{% endblock %}
+{% block header_title %}Karlılık Analizi{% endblock %}
+{% block content %}
+<style>
+  /* ════════════════════════════════════════════════════
+     KARLILIK ANALİZİ — LIGHT LUXURY TASARIM
+     ════════════════════════════════════════════════════ */
+
+  /* Mod butonları */
+  .krl-mod-bar {
+    display: flex; gap: 8px; margin-bottom: 16px;
+  }
+  .krl-mod-btn {
+    padding: 10px 20px; border: 1px solid var(--border-mid);
+    border-radius: var(--radius-md); background: var(--bg-surface);
+    cursor: pointer; font-weight: 600; font-size: 13px;
+    transition: all 0.15s; color: var(--text-main);
+    font-family: inherit;
+  }
+  .krl-mod-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .krl-mod-btn.aktif {
+    background: var(--primary); color: #fff; border-color: var(--primary);
+  }
+
+  /* Mod açıklama */
+  .mod-aciklama {
+    font-size: 12px; color: var(--text-muted);
+    margin-bottom: 18px; font-style: italic;
+  }
+
+  /* Para birimi toggle */
+  .pb-toggle-wrap {
+    display: flex; justify-content: flex-end; gap: 8px;
+    align-items: center; margin-bottom: 18px;
+  }
+  .pb-toggle-box {
+    display: inline-flex; background: var(--bg-surface);
+    border: 1px solid var(--border-mid); border-radius: var(--radius-sm);
+    padding: 3px; gap: 2px;
+  }
+  .pb-btn {
+    padding: 6px 14px; background: transparent;
+    color: var(--text-muted); border: none;
+    border-radius: 6px; font-weight: 600; cursor: pointer;
+    font-size: 13px; transition: all 0.15s;
+    font-family: inherit;
+  }
+  .pb-btn:hover { color: var(--primary); }
+  .pb-btn.aktif {
+    background: var(--primary); color: #fff; font-weight: 700;
+  }
+
+  /* Filtreler */
+  .krl-filter {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    align-items: flex-end; margin-bottom: 24px;
+    background: var(--bg-surface); padding: 18px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-blur);
+  }
+  .krl-filter .fi { display: flex; flex-direction: column; gap: 6px; }
+  .krl-filter label {
+    font-size: 11px; font-weight: 700;
+    color: var(--text-light); text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .krl-filter select, .krl-filter input {
+    padding: 10px 14px; border: 1px solid var(--border-mid);
+    border-radius: var(--radius-sm); background: var(--bg-surface);
+    color: var(--text-main); font-size: 13px;
+    outline: none; transition: border-color 0.2s; min-width: 140px;
+    font-family: inherit;
+  }
+  .krl-filter select:focus, .krl-filter input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(35, 40, 36, 0.04);
+  }
+
+  /* Özet kart grid */
+  .krl-kart-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px; margin-bottom: 24px;
+  }
+  .krl-kart {
+    background: var(--bg-surface); border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md); padding: 16px 20px;
+    box-shadow: var(--shadow-blur);
+  }
+  .krl-kart .lbl {
+    font-size: 11px; color: var(--text-muted);
+    font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .krl-kart .val {
+    font-size: 22px; font-weight: 700;
+    margin-top: 6px; font-family: monospace;
+  }
+
+  /* Sekme bar */
+  .krl-sekme-bar {
+    display: flex; gap: 4px; margin-bottom: 0;
+    border-bottom: 1px solid var(--border-soft);
+    background: var(--bg-surface);
+    padding: 12px 16px 0 16px;
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    border: 1px solid var(--border-soft);
+    border-bottom: none;
+  }
+  .krl-sekme {
+    padding: 10px 18px; cursor: pointer;
+    font-weight: 600; font-size: 13px;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px; color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .krl-sekme:hover { color: var(--primary); }
+  .krl-sekme.aktif {
+    color: var(--primary); border-bottom-color: var(--primary);
+    font-weight: 700;
+  }
+
+  /* Tablo */
+  .krl-tbl-box {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-soft);
+    border-top: none;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    overflow-x: auto; box-shadow: var(--shadow-blur);
+    margin-bottom: 24px;
+  }
+  .krl-tbl {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+  }
+  .krl-tbl th {
+    background: var(--bg-body); padding: 14px 16px;
+    text-align: left; font-size: 11px;
+    text-transform: uppercase; color: var(--text-muted);
+    font-weight: 600; border-bottom: 1px solid var(--border-soft);
+    letter-spacing: 0.5px; white-space: nowrap;
+  }
+  .krl-tbl td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text-main); vertical-align: middle;
+  }
+  .krl-tbl tr:hover td { background: var(--row-hover); }
+
+  /* Marj renkleri */
+  .marj-iyi   { color: var(--success); font-weight: 700; }
+  .marj-orta  { color: var(--accent);  font-weight: 700; }
+  .marj-dusuk { color: var(--danger);  font-weight: 700; }
+
+  /* Empty state */
+  .empty-row td {
+    text-align: center; padding: 50px 20px;
+    color: var(--text-light); font-style: italic;
+  }
+
+  /* Buton */
+  .btn {
+    padding: 9px 18px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    border: 1px solid transparent; transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: inherit;
+  }
+  .btn-outline { background: transparent; color: var(--text-main); border-color: var(--border-mid); }
+  .btn-outline:hover { background: var(--row-hover); }
+  .btn-sm { padding: 6px 14px; font-size: 12px; }
+</style>
+
+<div x-data="karlilikApp()" x-init="init()">
+
+  <!-- ═══ MOD SEÇİCİ ═══ -->
+  <div class="krl-mod-bar">
+    <button class="krl-mod-btn" :class="mod==='gerceklesen'?'aktif':''" @click="modDegistir('gerceklesen')">
+      Gerçekleşen Kârlılık
+    </button>
+    <button class="krl-mod-btn" :class="mod==='acik'?'aktif':''" @click="modDegistir('acik')">
+      Açık Siparişler (Tahmini)
+    </button>
+  </div>
+  <div class="mod-aciklama" x-text="modAciklama"></div>
+
+  <!-- ═══ PARA BİRİMİ TOGGLE ═══ -->
+  <div class="pb-toggle-wrap">
+    <span style="font-size:12px; color:var(--text-muted); font-weight:600">Görünüm:</span>
+    <div class="pb-toggle-box">
+      <template x-for="pb in ['USD','TRY','EUR']" :key="pb">
+        <button class="pb-btn" :class="aktifPB === pb ? 'aktif' : ''"
+                @click="degistirPB(pb)"
+                x-text="(pb==='TRY'?'₺':pb==='USD'?'$':'€') + ' ' + pb"></button>
+      </template>
+    </div>
+  </div>
+
+  <!-- ═══ ÖZET KARTLARI ═══ -->
+  <div class="krl-kart-grid">
+    <div class="krl-kart" style="border-left:4px solid var(--info)">
+      <div class="lbl">Kayıt</div>
+      <div class="val" style="color:var(--info)" x-text="ozet.adet"></div>
+    </div>
+    <div class="krl-kart" style="border-left:4px solid var(--success)">
+      <div class="lbl">Toplam Satış</div>
+      <div class="val" style="color:var(--success)" x-text="formatPB(ozetUSDtoplam('satis'))"></div>
+    </div>
+    <div class="krl-kart" style="border-left:4px solid var(--danger)">
+      <div class="lbl">Toplam Maliyet</div>
+      <div class="val" style="color:var(--danger)" x-text="formatPB(ozetUSDtoplam('maliyet'))"></div>
+    </div>
+    <div class="krl-kart" style="border-left:4px solid var(--accent)">
+      <div class="lbl">Net Kâr</div>
+      <div class="val" style="color:var(--accent)" x-text="formatPB(ozetUSDtoplam('kar'))"></div>
+    </div>
+    <div class="krl-kart" style="border-left:4px solid var(--primary-light)">
+      <div class="lbl">Ort. Marj</div>
+      <div class="val" :class="marjClass(ozet.ort_marj)" x-text="fmt3(ozet.ort_marj || 0) + '%'"></div>
+    </div>
+  </div>
+
+  <!-- ═══ FİLTRELER ═══ -->
+  <div class="krl-filter">
+    <div class="fi">
+      <label>Müşteri</label>
+      <select x-model="filtre.musteri" @change="listele()">
+        <option value="">Tümü</option>
+        <template x-for="m in lookup.musteriler"><option :value="m" x-text="m"></option></template>
+      </select>
+    </div>
+    <div class="fi">
+      <label>Cins</label>
+      <select x-model="filtre.cins" @change="listele()">
+        <option value="">Tümü</option>
+        <template x-for="c in lookup.cinsler"><option :value="c" x-text="c"></option></template>
+      </select>
+    </div>
+    <div class="fi">
+      <label>Baş. Tarih</label>
+      <input type="date" x-model="filtre.baslangic" @change="listele()">
+    </div>
+    <div class="fi">
+      <label>Son Tarih</label>
+      <input type="date" x-model="filtre.bitis" @change="listele()">
+    </div>
+    <div class="fi">
+      <button class="btn btn-outline btn-sm" @click="filtreSifirla()">Temizle</button>
+    </div>
+  </div>
+
+  <!-- ═══ SEKMELER ═══ -->
+  <div class="krl-sekme-bar">
+    <div class="krl-sekme" :class="sekme==='detay'?'aktif':''" @click="sekme='detay'">Detay</div>
+    <div class="krl-sekme" :class="sekme==='musteri'?'aktif':''" @click="sekmeAc('musteri')" x-show="mod==='gerceklesen'">Müşteri Bazlı</div>
+    <div class="krl-sekme" :class="sekme==='cins'?'aktif':''" @click="sekmeAc('cins')" x-show="mod==='gerceklesen'">Cins Bazlı</div>
+  </div>
+
+  <!-- ═══ DETAY TABLOSU ═══ -->
+  <div class="krl-tbl-box" x-show="sekme==='detay'">
+    <table class="krl-tbl">
+      <thead>
+        <tr>
+          <th>Tarih</th>
+          <th x-show="mod==='gerceklesen'">Stok ID</th>
+          <th>Müşteri</th>
+          <th>Tip / Cins</th>
+          <th style="text-align:right">Miktar</th>
+          <th style="text-align:right">Satış</th>
+          <th style="text-align:right">Maliyet</th>
+          <th style="text-align:right">Kâr</th>
+          <th style="text-align:center">Marj</th>
+          <th x-show="mod==='gerceklesen'">Fatura</th>
+          <th x-show="mod==='acik'">Durum</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="r in rows" :key="r.id">
+          <tr>
+            <td style="white-space:nowrap; color:var(--text-muted); font-size:12px" x-text="fmtTarih(r.tarih)"></td>
+            <td x-show="mod==='gerceklesen'" style="font-family:monospace; font-weight:700; color:var(--info)" x-text="r.stok_id"></td>
+            <td style="font-weight:600" x-text="r.musteri"></td>
+            <td>
+              <span x-text="r.urun_tip"></span> ·
+              <span style="color:var(--text-muted)" x-text="r.cins"></span>
+            </td>
+            <td style="text-align:right; font-family:monospace" x-text="fmt3(r.miktar || 0) + ' ' + (r.birim || '')"></td>
+            <td style="text-align:right; font-family:monospace; font-weight:600" x-text="formatPB(r.satis_usd)"></td>
+            <td style="text-align:right; font-family:monospace; color:var(--danger)" x-text="formatPB(r.maliyet_usd)"></td>
+            <td style="text-align:right; font-family:monospace" :class="(r.kar_usd || 0) >= 0 ? 'marj-iyi' : 'marj-dusuk'" x-text="formatPB(r.kar_usd)"></td>
+            <td style="text-align:center" :class="marjClass(r.marj)" x-text="fmt3(r.marj || 0) + '%'"></td>
+            <td x-show="mod==='gerceklesen'" style="font-family:monospace; font-size:12px"
+                x-text="r.fatura_no || '—'"
+                :style="r.fatura_no ? 'color:var(--success)' : 'color:var(--text-muted)'"></td>
+            <td x-show="mod==='acik'" x-text="r.durum"></td>
+          </tr>
+        </template>
+        <tr x-show="rows.length === 0" class="empty-row">
+          <td colspan="11">
+            Kayıt bulunamadı
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══ MÜŞTERİ BAZLI ═══ -->
+  <div class="krl-tbl-box" x-show="sekme==='musteri'">
+    <table class="krl-tbl">
+      <thead>
+        <tr>
+          <th>Müşteri</th>
+          <th style="text-align:right">Satış Adedi</th>
+          <th style="text-align:right">Toplam Satış</th>
+          <th style="text-align:right">Toplam Maliyet</th>
+          <th style="text-align:right">Net Kâr</th>
+          <th style="text-align:center">Marj</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="m in musteriOzet" :key="m.musteri">
+          <tr>
+            <td style="font-weight:600" x-text="m.musteri"></td>
+            <td style="text-align:right" x-text="m.adet"></td>
+            <td style="text-align:right; font-family:monospace; font-weight:600" x-text="formatPB(m.satis_usd)"></td>
+            <td style="text-align:right; font-family:monospace; color:var(--danger)" x-text="formatPB(m.maliyet_usd)"></td>
+            <td style="text-align:right; font-family:monospace" :class="(m.kar_usd || 0) >= 0 ? 'marj-iyi' : 'marj-dusuk'" x-text="formatPB(m.kar_usd)"></td>
+            <td style="text-align:center" :class="marjClass(m.marj)" x-text="fmt3(m.marj || 0) + '%'"></td>
+          </tr>
+        </template>
+        <tr x-show="musteriOzet.length === 0" class="empty-row">
+          <td colspan="6">Veri bulunmuyor</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══ CİNS BAZLI ═══ -->
+  <div class="krl-tbl-box" x-show="sekme==='cins'">
+    <table class="krl-tbl">
+      <thead>
+        <tr>
+          <th>Cins</th>
+          <th style="text-align:right">Satış Adedi</th>
+          <th style="text-align:right">Toplam Satış</th>
+          <th style="text-align:right">Toplam Maliyet</th>
+          <th style="text-align:right">Net Kâr</th>
+          <th style="text-align:center">Marj</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="c in cinsOzet" :key="c.cins">
+          <tr>
+            <td style="font-weight:600" x-text="c.cins"></td>
+            <td style="text-align:right" x-text="c.adet"></td>
+            <td style="text-align:right; font-family:monospace; font-weight:600" x-text="formatPB(c.satis_usd)"></td>
+            <td style="text-align:right; font-family:monospace; color:var(--danger)" x-text="formatPB(c.maliyet_usd)"></td>
+            <td style="text-align:right; font-family:monospace" :class="(c.kar_usd || 0) >= 0 ? 'marj-iyi' : 'marj-dusuk'" x-text="formatPB(c.kar_usd)"></td>
+            <td style="text-align:center" :class="marjClass(c.marj)" x-text="fmt3(c.marj || 0) + '%'"></td>
+          </tr>
+        </template>
+        <tr x-show="cinsOzet.length === 0" class="empty-row">
+          <td colspan="6">Veri bulunmuyor</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function karlilikApp() {
+  return {
+    mod: 'gerceklesen',
+    sekme: 'detay',
+    rows: [],
+    ozet: { adet: 0, toplam_satis_usd: 0, toplam_maliyet_usd: 0, toplam_kar_usd: 0, ort_marj: 0 },
+    aktifPB: localStorage.getItem('karlilik_pb') || 'USD',
+    kurUSD: 1,
+    kurEUR: 1,
+    filtre: { musteri: '', cins: '', baslangic: '', bitis: '' },
+    lookup: { musteriler: [], cinsler: [] },
+    musteriOzet: [],
+    cinsOzet: [],
+
+    // ─── Helper'lar ───
+    fmt3(n) {
+      const v = parseFloat(n) || 0;
+      return v.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+    },
+    fmtTarih(iso) {
+      if (!iso) return '—';
+      return new Date(iso).toLocaleDateString('tr-TR');
+    },
+
+    get modAciklama() {
+      return this.mod === 'gerceklesen'
+        ? 'Teslim edilmiş siparişlerden oluşan gerçek satış kayıtları. Maliyet, Maliyet modülündeki gerçek verilerden gelir.'
+        : 'Henüz teslim edilmemiş açık siparişler. Kârlılık tahminîdir, sipariş tamamlanınca kesinleşir.';
+    },
+
+    async init() {
+      // USD/TRY kuru
+      try {
+        const ru = await fetch('/api/doviz_kur?doviz=USD').then(r => r.json());
+        this.kurUSD = ru.kur || ru.alis || ru.satis || 1;
+      } catch(e) {
+        // Fallback: /api/doviz_kur direkt çağrısı
+        try {
+          const kurRes = await fetch('/api/doviz_kur').then(r => r.json());
+          this.kurUSD = kurRes.USD?.efektif || kurRes.USD?.alis || 35;
+          this.kurEUR = kurRes.EUR?.efektif || kurRes.EUR?.alis || 38;
+        } catch(e2) {
+          this.kurUSD = 35; this.kurEUR = 38;
+        }
+      }
+      // EUR/TRY kuru (sadece USD endpoint başarılıysa ayrı çağrı yap)
+      if (this.kurEUR === 1) {
+        try {
+          const re_ = await fetch('/api/doviz_kur?doviz=EUR').then(r => r.json());
+          this.kurEUR = re_.kur || re_.alis || re_.satis || 38;
+        } catch(e) { this.kurEUR = 38; }
+      }
+
+      // Lookup'lar
+      try {
+        const lr = await fetch('/api/satislar/lookup').then(r => r.json());
+        this.lookup.musteriler = lr.musteriler || [];
+        this.lookup.cinsler = lr.cinsler || [];
+      } catch(e) { console.warn('Lookup yüklenemedi:', e); }
+
+      await this.listele();
+    },
+
+    async listele() {
+      const p = new URLSearchParams({ mod: this.mod });
+      Object.entries(this.filtre).forEach(([k, v]) => { if (v) p.set(k, v); });
+      try {
+        const r = await fetch('/api/karlilik?' + p).then(r => r.json());
+        this.rows = r.data || [];
+        this.ozet = r.ozet || { adet: 0, toplam_satis_usd: 0, toplam_maliyet_usd: 0, toplam_kar_usd: 0, ort_marj: 0 };
+      } catch(e) {
+        Utils.error('Veri yüklenemedi: ' + e.message);
+      }
+    },
+
+    async modDegistir(m) {
+      this.mod = m;
+      this.sekme = 'detay';
+      await this.listele();
+    },
+
+    async sekmeAc(s) {
+      this.sekme = s;
+      if (s === 'musteri') await this.musteriOzetYukle();
+      else if (s === 'cins') await this.cinsOzetYukle();
+    },
+
+    async musteriOzetYukle() {
+      try {
+        const data = await fetch('/api/karlilik/musteri_ozet').then(r => r.json());
+        this.musteriOzet = Array.isArray(data) ? data : (data.data || []);
+      } catch(e) {
+        Utils.error('Müşteri özeti yüklenemedi: ' + e.message);
+        this.musteriOzet = [];
+      }
+    },
+
+    async cinsOzetYukle() {
+      try {
+        const data = await fetch('/api/karlilik/cins_ozet').then(r => r.json());
+        this.cinsOzet = Array.isArray(data) ? data : (data.data || []);
+      } catch(e) {
+        Utils.error('Cins özeti yüklenemedi: ' + e.message);
+        this.cinsOzet = [];
+      }
+    },
+
+    filtreSifirla() {
+      this.filtre = { musteri: '', cins: '', baslangic: '', bitis: '' };
+      this.listele();
+    },
+
+    degistirPB(pb) {
+      this.aktifPB = pb;
+      localStorage.setItem('karlilik_pb', pb);
+    },
+
+    ozetUSDtoplam(alan) {
+      if (alan === 'satis') return this.ozet.toplam_satis_usd || 0;
+      if (alan === 'maliyet') return this.ozet.toplam_maliyet_usd || 0;
+      if (alan === 'kar') return this.ozet.toplam_kar_usd || 0;
+      return 0;
+    },
+
+    formatPB(usdDeger) {
+      let deger = usdDeger || 0;
+      let sembol = '$';
+      if (this.aktifPB === 'TRY') {
+        deger = (usdDeger || 0) * (this.kurUSD || 1);
+        sembol = '₺';
+      } else if (this.aktifPB === 'EUR') {
+        const tryDeger = (usdDeger || 0) * (this.kurUSD || 1);
+        deger = this.kurEUR ? tryDeger / this.kurEUR : tryDeger;
+        sembol = '€';
+      }
+      const formatted = new Intl.NumberFormat('tr-TR', {
+        minimumFractionDigits: 2, maximumFractionDigits: 2
+      }).format(deger);
+      return formatted + ' ' + sembol;
+    },
+
+    marjClass(m) {
+      m = parseFloat(m) || 0;
+      return m >= 20 ? 'marj-iyi' : (m >= 10 ? 'marj-orta' : 'marj-dusuk');
+    }
+  };
+}
+</script>
+{% endblock %}

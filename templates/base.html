@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Milestone ERP - {% block title %}{% endblock %}</title>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Outfit:wght@300;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* ==========================================================
+       MILESTONE ERP - ORGANIC & EARTHY DESIGN SYSTEM (v2)
+       Stone Grey · Terracotta · Sage  (Light theme)
+       ========================================================== */
+    :root {
+      /* ====== FERAH PALET — F2 · Yumuşak Şeftali (charcoal ink + soft peach) ====== */
+      --bg-body: #F8F8F6;
+      --bg-surface: #FFFFFF;
+
+      --primary: #3FA38C;          /* taze yeşil (Excel butonu) — başlık + ana buton */
+      --primary-light: #34917C;
+      --accent: #DE8A4C;           /* yumuşak şeftali aksan */
+      --accent-light: #FCEFE2;     /* soft aksan zemini (aktif menü, pill) */
+      --row-hover: #E8EEF1;        /* tablo satır hover — gri-mavi pastel */
+
+      --border-soft: #EFEFEA;
+      --border-mid: #E2E2DC;
+
+      --text-main: #454A52;
+      --text-muted: #7C828B;
+      --text-light: #AEB3BA;
+
+      --success: #3FA38C; --success-bg: #E4F3EE;
+      --danger:  #D9756A; --danger-bg:  #F7EAE7;
+      --info:    #5B8DBF; --info-bg:    #E9F1F8;
+      --warn:    #B0892E; --warn-bg:    #F8F1DD;
+
+      /* Açık (beyaz) sidebar — ferah */
+      --sidebar-bg: #FFFFFF;
+      --sidebar-border: var(--border-soft);
+      --sidebar-text: var(--text-muted);
+      --sidebar-sec: var(--text-light);
+      --sidebar-active-bg: var(--accent-light);
+      --sidebar-active-text: var(--accent);
+      --sidebar-hover-bg: var(--bg-body);
+
+      --radius-sm: 7px; --radius-md: 10px; --radius-lg: 14px;
+
+      --shadow-blur: 0 1px 2px rgba(40,40,40,.04), 0 4px 16px rgba(40,40,40,.045);
+      --shadow-hover: 0 6px 22px rgba(40,40,40,0.09);
+
+      --sidebar-width: 270px;
+      --sidebar-collapsed-width: 76px;
+      --header-height: 70px;
+
+      /* Geriye dönük uyumluluk */
+      --nav-bg: var(--primary);
+      --border: var(--border-mid);
+      --sp-sm: 8px; --sp-md: 16px; --sp-lg: 24px;
+      --font-xs: 12px; --font-sm: 13px; --font-base: 14px; --font-md: 16px; --font-lg: 18px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'IBM Plex Sans', sans-serif; }
+    body { background-color: var(--bg-body); color: var(--text-main); overflow-x: hidden; -webkit-font-smoothing: antialiased; line-height: 1.55; }
+    h1, h2, h3, h4, h5, .brand-logo, .page-title { font-family: 'Outfit', sans-serif; letter-spacing: -0.015em; }
+
+    /* Layout */
+    .app-layout { display: flex; min-height: 100vh; }
+
+    /* Sidebar - YENİ İKON SÜTUNLU DÜZEN */
+    .sidebar-panel {
+      width: var(--sidebar-width); background-color: var(--sidebar-bg); border-right: 1px solid var(--sidebar-border);
+      position: fixed; top: 0; bottom: 0; left: 0; z-index: 50; display: flex; flex-direction: column;
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+    }
+    .sidebar-panel.collapsed { width: var(--sidebar-collapsed-width); }
+    
+    .sidebar-header { height: var(--header-height); display: flex; align-items: center; padding: 0 24px; border-bottom: 1px solid var(--sidebar-border); transition: padding 0.3s; }
+    .sidebar-panel.collapsed .sidebar-header { padding: 0; justify-content: center; }
+    
+    .brand-logo { font-size: 18px; font-weight: 700; color: var(--text-main); letter-spacing: -0.3px; display: flex; align-items: center; gap: 11px; white-space: nowrap; }
+    .brand-logo svg { stroke: var(--accent); }
+    .brand-logo .brand-text span { color: var(--accent); }
+    .sidebar-panel.collapsed .brand-text { display: none; }
+    .menu-icon { min-width: 24px; display: inline-flex; justify-content: center; align-items: center; }
+    .menu-icon svg { width: 19px; height: 19px; }
+
+    .sidebar-content { flex: 1; padding: 24px 16px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; overflow-x: hidden; }
+    .sidebar-panel.collapsed .sidebar-content { padding: 24px 10px; }
+    
+    .menu-section-title { font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: var(--sidebar-sec); padding: 16px 16px 6px 16px; letter-spacing: 1px; white-space: nowrap; }
+    .sidebar-panel.collapsed .menu-section-title { display: none; }
+    
+    .navigation-link { display: flex; align-items: center; gap: 12px; padding: 10px 14px; color: var(--sidebar-text); text-decoration: none; border-radius: var(--radius-md); font-size: 13.5px; font-weight: 500; transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap; }
+    .sidebar-panel.collapsed .navigation-link { padding: 14px 0; justify-content: center; }
+    .sidebar-panel.collapsed .menu-text { display: none; }
+    
+    .navigation-link:hover { background-color: var(--sidebar-hover-bg); color: var(--primary); }
+    .navigation-link.active { background-color: var(--sidebar-active-bg); color: var(--sidebar-active-text); font-weight: 600; }
+
+    /* Workspace */
+    .workspace-frame { flex: 1; display: flex; flex-direction: column; min-width: 0; margin-left: var(--sidebar-width); transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .workspace-frame.full-width { margin-left: var(--sidebar-collapsed-width); }
+
+    /* Navbar */
+    .navbar-top { height: var(--header-height); background-color: var(--bg-surface); border-bottom: 1px solid var(--border-soft); display: flex; align-items: center; justify-content: space-between; padding: 0 32px; position: sticky; top: 0; z-index: 40; }
+    .navbar-left-actions { display: flex; align-items: center; gap: 28px; }
+    .sidebar-trigger { background: var(--border-soft); border: none; color: var(--text-main); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: var(--radius-sm); transition: background-color 0.2s, transform 0.1s; }
+    .sidebar-trigger:hover { background-color: var(--border-mid); }
+    .sidebar-trigger:active { transform: scale(0.96); }
+    
+    .navbar-shortcuts { display: flex; align-items: center; gap: 6px; }
+    .shortcut-tab { text-decoration: none; color: var(--text-muted); font-size: 13px; font-weight: 600; padding: 8px 16px; border-radius: var(--radius-sm); background: transparent; transition: all 0.2s ease; white-space: nowrap; }
+    .shortcut-tab:hover { color: var(--primary); background: var(--bg-body); }
+    .shortcut-tab.active { background-color: var(--accent-light); color: var(--accent); }
+    .navbar-view-title { font-size: 15px; font-weight: 600; color: var(--primary); margin-left: 8px; }
+    .navbar-right-actions { display: flex; align-items: center; gap: 20px; font-size: 13px; font-weight: 500; color: var(--text-muted); }
+
+    .view-container { flex: 1; padding: 32px; max-width: 1600px; width: 100%; margin: 0 auto; }
+    .ui-card { background-color: var(--bg-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-blur); border: 1px solid transparent; padding: 24px; margin-bottom: 24px; transition: box-shadow 0.3s ease; }
+    .ui-card:hover { box-shadow: var(--shadow-hover); }
+
+    /* Utilities */
+    .flex-row { display: flex; align-items: center; }
+    .gap-sm { gap: var(--sp-sm); }
+    .gap-md { gap: var(--sp-md); }
+    .mb-md { margin-bottom: var(--sp-md); }
+    .mb-lg { margin-bottom: var(--sp-lg); }
+    .w-100 { width: 100%; }
+    .r { text-align: right; }
+    .p-0 { padding: 0 !important; }
+
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: var(--font-xs); font-weight: 700; letter-spacing: 0.3px; }
+    .badge-serbest { background: var(--success-bg); color: var(--success); }
+    .badge-rezerve { background: var(--warn-bg); color: var(--warn); }
+    .badge-satildi { background: var(--danger-bg); color: var(--danger); }
+    .badge-aktif { background: var(--info-bg); color: var(--info); }
+
+    .flash { padding: 14px 20px; border-radius: var(--radius-md); margin-bottom: var(--sp-md); font-size: var(--font-base); font-weight: 500; box-shadow: var(--shadow-sm); }
+    .flash-error { background: var(--danger-bg); color: var(--danger); border: 1px solid #E2C9C5; }
+    .flash-success { background: var(--success-bg); color: var(--success); border: 1px solid #CBD6CC; }
+
+    /* Modals */
+    .modal-bg { position: fixed; inset: 0; background: rgba(35,40,36,.6); z-index: 200; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+    .modal { background: var(--bg-surface); border-radius: var(--radius-md); padding: var(--sp-lg); width: min(1200px, 95vw); max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-hover); }
+    .modal-title { font-size: var(--font-lg); font-weight: 700; margin-bottom: var(--sp-lg); display: flex; justify-content: space-between; align-items: center; color: var(--text-main); }
+    .modal-close { cursor: pointer; color: var(--text-muted); font-size: 24px; line-height: 1; transition: all 0.3s; }
+    
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sp-md); margin-bottom: var(--sp-md); }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 14px; border: 1px solid var(--border-mid); border-radius: var(--radius-sm); font-size: 13px; color: var(--text-main); background: var(--bg-surface); outline: none; transition: all 0.3s; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(35, 40, 36, 0.06); }
+    
+    .btn { padding: 10px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid var(--border-mid); background: var(--bg-surface); color: var(--text-main); transition: all 0.3s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn:hover { background: var(--border-soft); }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-primary:hover { background: var(--primary-light); color: #fff; }
+    .btn-confirm { background: #DCEDE0; color: #2F6B47; border-color: #BFDFC9; }
+    .btn-confirm:hover { background: #CDE6D4; color: #2F6B47; }
+    .btn-accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    
+    [x-cloak] { display: none !important; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body x-data="{ sidebarOpen: true }">
+
+  <div class="app-layout">
+    <aside class="sidebar-panel" :class="{ 'collapsed': !sidebarOpen }">
+      <div class="sidebar-header">
+        <div class="brand-logo"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg> <span class="brand-text">Milestone <span>ERP</span></span></div>
+      </div>
+      <nav class="sidebar-content" title="Menü Kısayolları">
+        {% if (menu_yetki|default({})).get('stok', 'gizli') != 'gizli' %}
+        <div class="menu-section-title">STOK</div>
+        <a href="/stok" class="navigation-link {% if '/stok' in request.path %}active{% endif %}" title="Stok Yönetimi"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></span> <span class="menu-text">Stok Yönetimi</span></a>
+        {% endif %}
+
+        {% if (menu_yetki|default({})).get('siparis', 'gizli') != 'gizli' %}
+        <div class="menu-section-title">SİPARİŞ</div>
+        <a href="/siparis" class="navigation-link {% if '/siparis' in request.path %}active{% endif %}" title="Sipariş Yönetimi"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span> <span class="menu-text">Sipariş Yönetimi</span></a>
+        <a href="/rezervasyon" class="navigation-link {% if '/rezervasyon' in request.path %}active{% endif %}" title="Rezervasyonlar"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M9 16l2 2 4-4"/></svg></span> <span class="menu-text">Rezervasyonlar</span></a>
+        {% endif %}
+
+        <div class="menu-section-title">CARİ & FİNANS</div>
+        {% if (menu_yetki|default({})).get('cari', 'gizli') != 'gizli' %}<a href="/cari" class="navigation-link {% if '/cari' in request.path %}active{% endif %}" title="Cari İşlemler"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span> <span class="menu-text">Cari İşlemler</span></a>{% endif %}
+        {% if (menu_yetki|default({})).get('maliyet', 'gizli') != 'gizli' %}<a href="/maliyet" class="navigation-link {% if request.path == '/maliyet' %}active{% endif %}" title="Maliyetler"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span> <span class="menu-text">Maliyetler</span></a>{% endif %}
+        {% if (menu_yetki|default({})).get('kasa', 'gizli') != 'gizli' %}<a href="/kasa" class="navigation-link {% if request.path == '/kasa' %}active{% endif %}" title="Kasa"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg></span> <span class="menu-text">Kasa</span></a>{% endif %}
+        {% if (menu_yetki|default({})).get('kasa', 'gizli') != 'gizli' %}<a href="/cek" class="navigation-link {% if request.path == '/cek' %}active{% endif %}" title="Çek / Senet Takibi"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg></span> <span class="menu-text">Çek / Senet</span></a>{% endif %}
+        {% if (menu_yetki|default({})).get('kesim', 'gizli') != 'gizli' %}<a href="/kesim" class="navigation-link {% if request.path == '/kesim' %}active{% endif %}" title="Kesim"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg></span> <span class="menu-text">Kesim</span></a>{% endif %}
+
+        <div class="menu-section-title">LOJİSTİK & ANALİZ</div>
+        {% if (menu_yetki|default({})).get('sevkiyat', 'gizli') != 'gizli' %}<a href="/sevkiyat" class="navigation-link {% if request.path == '/sevkiyat' %}active{% endif %}" title="Sevkiyat"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></span> <span class="menu-text">Sevkiyat</span></a>{% endif %}
+        {% if (menu_yetki|default({})).get('karlilik', 'gizli') != 'gizli' %}<a href="/karlilik" class="navigation-link {% if request.path == '/karlilik' %}active{% endif %}" title="Karlılık"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="20" x2="6" y2="14"/><line x1="12" y1="20" x2="12" y2="8"/><line x1="18" y1="20" x2="18" y2="4"/></svg></span> <span class="menu-text">Karlılık</span></a>{% endif %}
+        {% if (menu_yetki|default({})).get('proforma', 'gizli') != 'gizli' %}<a href="/proforma" class="navigation-link {% if request.path == '/proforma' %}active{% endif %}" title="Proforma"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg></span> <span class="menu-text">Proforma</span></a>{% endif %}
+        {% if (menu_yetki|default({})).get('fatura', 'gizli') != 'gizli' %}<a href="/fatura" class="navigation-link {% if request.path == '/fatura' %}active{% endif %}" title="Faturalar"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="1"/><line x1="9" y1="7" x2="15" y2="7"/><line x1="9" y1="11" x2="15" y2="11"/><line x1="9" y1="15" x2="13" y2="15"/></svg></span> <span class="menu-text">Faturalar</span></a>{% endif %}
+        {% if (menu_yetki|default({})).get('satislar', 'gizli') != 'gizli' %}<a href="/satislar" class="navigation-link {% if '/satislar' in request.path %}active{% endif %}" title="Satışlar"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></span> <span class="menu-text">Satışlar</span></a>{% endif %}
+        {% if (menu_yetki|default({})).get('raporlar', 'gizli') != 'gizli' %}<a href="/raporlar" class="navigation-link {% if request.path == '/raporlar' %}active{% endif %}" title="Raporlar"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></span> <span class="menu-text">Raporlar</span></a>{% endif %}
+
+        <div class="menu-section-title">SİSTEM</div>
+        {% if (menu_yetki|default({})).get('ayarlar', 'gizli') != 'gizli' or menu_admin %}<a href="/ayarlar" class="navigation-link {% if request.path == '/ayarlar' %}active{% endif %}" title="Ayarlar"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span> <span class="menu-text">Ayarlar</span></a>{% endif %}
+        {% if session.get('rol') == 'ADMIN' and ((menu_yetki|default({})).get('denetim', 'gizli') != 'gizli' or menu_admin) %}
+        <a href="/denetim" class="navigation-link {% if request.path == '/denetim' %}active{% endif %}" title="Denetim Kaydı"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span> <span class="menu-text">Denetim Kaydı</span></a>
+        {% endif %}
+        
+        <a href="/cikis" class="navigation-link" style="color:var(--danger); margin-top:20px;" title="Çıkış Yap"><span class="menu-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> <span class="menu-text">Çıkış Yap</span></a>
+      </nav>
+    </aside>
+
+    <div class="workspace-frame" :class="{ 'full-width': !sidebarOpen }">
+      <header class="navbar-top">
+        <div class="navbar-left-actions">
+          <button class="sidebar-trigger" @click="sidebarOpen = !sidebarOpen" title="Menüyü Daralt/Genişlet"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+          <div class="navbar-shortcuts">
+            <a href="/dashboard" class="shortcut-tab {% if request.path == '/dashboard' or request.path == '/' %}active{% endif %}">Ana Sayfa</a>
+            <a href="/stok" class="shortcut-tab {% if '/stok' in request.path %}active{% endif %}">Stok</a>
+            <a href="/siparis" class="shortcut-tab {% if '/siparis' in request.path %}active{% endif %}">Sipariş</a>
+            <a href="/cari" class="shortcut-tab {% if '/cari' in request.path %}active{% endif %}">Cari</a>
+          </div>
+        </div>
+        <div class="navbar-right-actions">
+          <span style="font-weight:700; color:var(--primary);">{{ session.get('kullanici','') }}</span>
+          <span id="hdr-tarih"></span>
+          {% block header_right %}{% endblock %}
+        </div>
+      </header>
+
+      <main class="view-container">
+        {% with msgs = get_flashed_messages(with_categories=true) %}
+          {% for cat, msg in msgs %}
+            <div class="flash flash-{{ cat }}">{{ msg }}</div>
+          {% endfor %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+
+<script>
+document.getElementById('hdr-tarih').textContent = new Date().toLocaleDateString('tr-TR', {day:'2-digit',month:'2-digit',year:'numeric'});
+</script>
+{% block scripts %}{% endblock %}
+
+<!-- ═══════════ TOAST NOTIFICATION SYSTEM ═══════════ -->
+<div id="toast-container" style="position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:10px; pointer-events:none; max-width:420px;"></div>
+<style>
+  .toast-msg { background: #fff; border-left: 4px solid #3b82f6; border-radius: 8px; padding: 14px 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); min-width: 280px; font-size: 13px; pointer-events: auto; display: flex; align-items: flex-start; gap: 10px; animation: toast-in 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+  .toast-msg.success { border-left-color: #10b981; }
+  .toast-msg.error { border-left-color: #ef4444; }
+  .toast-msg.warning { border-left-color: #f59e0b; }
+  .toast-msg .toast-icon { font-size: 16px; }
+  .toast-msg .toast-body { flex: 1; }
+  .toast-msg .toast-close { background: none; border: none; cursor: pointer; color: #A6A39B; font-size: 16px; }
+  @keyframes toast-in { from { opacity: 0; transform: translateX(100%); } to { opacity: 1; transform: translateX(0); } }
+</style>
+<script>
+(function() {
+  function showToast(message, type, duration) {
+    type = type || 'info'; duration = duration || 4000;
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+    const toast = document.createElement('div');
+    toast.className = 'toast-msg ' + type;
+    toast.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span><div class="toast-body">${String(message)}</div><button class="toast-close">×</button>`;
+    container.appendChild(toast);
+    const remove = () => { toast.style.opacity=0; setTimeout(()=>toast.remove(), 300); };
+    toast.querySelector('.toast-close').onclick = remove;
+    setTimeout(remove, duration);
+  }
+  window.Utils = window.Utils || {};
+  function _qNum(v, n) {
+    if (v === null || v === undefined || v === '' || isNaN(v)) return 0;
+    const num = parseFloat(v);
+    if (!isFinite(num)) return 0;
+    const f = Math.pow(10, n);
+    const isNeg = num < 0;
+    const r = Math.round(Math.abs(num) * f + Number.EPSILON) / f;
+    return isNeg ? -r : r;
+  }
+  Utils.q3 = function(v) { return _qNum(v, 3); };
+  Utils.qKur = function(v) { return _qNum(v, 6); };
+  Utils.qOran = function(v) { return _qNum(v, 4); };
+  Utils.fmt3 = function(v) { return Utils.q3(v).toLocaleString('tr-TR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }); };
+  Utils.toast = function(msg, dur) { showToast(msg, 'info', dur); };
+  Utils.success = function(msg, dur) { showToast(msg, 'success', dur); };
+  Utils.error = function(msg, dur) { showToast(msg, 'error', dur || 6000); };
+  Utils.showToast = showToast;
+  const origAlert = window.alert;
+  window.alert = function(msg) { if(msg) showToast(msg, /hata|silinemez|başarısız|zorunlu/i.test(msg)?'error':'info'); };
+  window.alertNative = origAlert;
+})();
+</script>
+
+<!-- ═══════════ CONFIRM MODAL ═══════════ -->
+<div id="confirm-modal-bg" style="display:none; position:fixed; inset:0; background:rgba(35,40,36,0.6); z-index:10000; align-items:center; justify-content:center; backdrop-filter:blur(2px);">
+  <div style="background:#fff; border-radius:16px; padding:0; min-width:380px; max-width:480px; width:90%; box-shadow:0 25px 60px rgba(0,0,0,0.2); overflow:hidden;">
+    <!-- Başlık -->
+    <div id="confirm-modal-header" style="padding:20px 24px 16px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; gap:12px;">
+      <div id="confirm-modal-icon-wrap" style="width:40px; height:40px; border-radius:10px; background:#fee2e2; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0;">
+        <span id="confirm-modal-icon">⚠️</span>
+      </div>
+      <div>
+        <div id="confirm-modal-title" style="font-size:15px; font-weight:700; color:#0f172a;"></div>
+        <div id="confirm-modal-subtitle" style="font-size:12px; color:#A6A39B; margin-top:2px;"></div>
+      </div>
+    </div>
+    <!-- Mesaj -->
+    <div style="padding:16px 24px;">
+      <div id="confirm-modal-msg" style="font-size:13px; color:#475569; line-height:1.6;"></div>
+      <div id="confirm-modal-detail" style="display:none; margin-top:12px; padding:10px 14px; background:#fef2f2; border:1px solid #fecaca; border-radius:8px; font-size:12px; color:#991b1b; line-height:1.6;"></div>
+    </div>
+    <!-- Butonlar -->
+    <div style="padding:12px 24px 20px; display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;">
+      <button id="confirm-modal-cancel" class="btn btn-secondary" style="font-size:13px;">↩ Vazgeç</button>
+      <button id="confirm-modal-edit" class="btn btn-outline" style="font-size:13px; display:none; border-color:#b45309; color:#b45309;">✏️ Düzenle</button>
+      <button id="confirm-modal-ok" class="btn btn-danger" style="font-size:13px;">🗑️ Sil</button>
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  function showConfirm(message, opts) {
+    opts = opts || {};
+    const bg       = document.getElementById('confirm-modal-bg');
+    const iconWrap = document.getElementById('confirm-modal-icon-wrap');
+    const icon     = document.getElementById('confirm-modal-icon');
+    const title    = document.getElementById('confirm-modal-title');
+    const subtitle = document.getElementById('confirm-modal-subtitle');
+    const msgEl    = document.getElementById('confirm-modal-msg');
+    const detailEl = document.getElementById('confirm-modal-detail');
+    const okBtn    = document.getElementById('confirm-modal-ok');
+    const editBtn  = document.getElementById('confirm-modal-edit');
+    const cancelBtn= document.getElementById('confirm-modal-cancel');
+
+    const isDanger = opts.danger !== false && (opts.danger === true || /sil|iptal|kalıcı|kaldır/i.test(message));
+
+    title.textContent    = opts.title    || (isDanger ? 'Bu işlemi onaylıyor musunuz?' : 'Onay Gerekli');
+    subtitle.textContent = opts.subtitle || (isDanger ? 'Bu işlem geri alınamaz.' : '');
+    icon.textContent     = opts.icon     || (isDanger ? '🗑️' : '❓');
+    iconWrap.style.background = isDanger ? '#fee2e2' : '#E4F1E9';
+
+    msgEl.textContent = String(message || '');
+
+    if (opts.detail) {
+      detailEl.innerHTML = opts.detail;
+      detailEl.style.display = 'block';
+    } else {
+      detailEl.style.display = 'none';
+    }
+
+    okBtn.textContent = opts.okText || (isDanger ? '🗑️ SİL' : 'EVET');
+    okBtn.className   = (isDanger ? 'btn btn-danger' : 'btn btn-confirm');
+    okBtn.style.fontSize = '13px';
+
+    if (opts.onEdit) {
+      editBtn.style.display = 'inline-flex';
+      editBtn.onclick = () => { bg.style.display = 'none'; opts.onEdit(); };
+    } else {
+      editBtn.style.display = 'none';
+    }
+
+    bg.style.display = 'flex';
+    return new Promise((resolve) => {
+      const cleanup = (val) => {
+        bg.style.display = 'none';
+        okBtn.onclick = null;
+        cancelBtn.onclick = null;
+        resolve(val);
+      };
+      okBtn.onclick     = () => cleanup(true);
+      cancelBtn.onclick = () => cleanup(false);
+    });
+  }
+
+  window.Utils.confirm = function(msg, opts) {
+    opts = opts || {};
+    if (opts.danger === undefined) opts.danger = /sil|iptal|kalıcı|kaldır/i.test(msg);
+    return showConfirm(msg, opts);
+  };
+
+  // Silme için özel yardımcı
+  window.Utils.confirmSil = function(baslik, opts) {
+    opts = opts || {};
+    return showConfirm(
+      opts.mesaj || 'Bu kaydı silmek istediğinizden emin misiniz?',
+      {
+        danger:   true,
+        title:    baslik || 'Kaydı Sil',
+        subtitle: 'Bu işlem geri alınamaz.',
+        detail:   opts.detail || null,
+        okText:   opts.okText || '🗑️ SİL',
+        onEdit:   opts.onEdit || null,
+      }
+    );
+  };
+
+  // Açıklama/not gösterme modalı (salt-okunur)
+  window.Utils.aciklamaGoster = function(metin, baslik) {
+    if (!metin || !metin.trim()) return;
+    let bg = document.getElementById('_aciklama_modal_bg');
+    if (!bg) {
+      bg = document.createElement('div');
+      bg.id = '_aciklama_modal_bg';
+      bg.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:9999; display:flex; align-items:center; justify-content:center; padding:20px;';
+      bg.addEventListener('click', function(e){ if(e.target===bg) bg.style.display='none'; });
+      bg.innerHTML = '<div style="background:#fff; border-radius:12px; max-width:520px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.3); overflow:hidden;">'
+        + '<div style="padding:16px 20px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">'
+        + '<span id="_aciklama_baslik" style="font-weight:700; font-size:15px; color:#232824;">📝 Açıklama</span>'
+        + '<span id="_aciklama_kapat" style="cursor:pointer; font-size:22px; color:#A6A39B; line-height:1;">&times;</span></div>'
+        + '<div id="_aciklama_metin" style="padding:20px; font-size:14px; line-height:1.6; color:#3A3F39; white-space:pre-wrap; max-height:60vh; overflow:auto;"></div></div>';
+      document.body.appendChild(bg);
+      document.getElementById('_aciklama_kapat').addEventListener('click', function(){ bg.style.display='none'; });
+    }
+    document.getElementById('_aciklama_baslik').textContent = '📝 ' + (baslik || 'Açıklama');
+    document.getElementById('_aciklama_metin').textContent = metin;
+    bg.style.display = 'flex';
+  };
+})();
+</script>
+
+<style>input[type="text"]:not(.no-upper), input[type="search"]:not(.no-upper), textarea:not(.no-upper) { text-transform: uppercase; }</style>
+<script>
+document.addEventListener('input', function(e) {
+  const el = e.target;
+  if(el.tagName === 'TEXTAREA' && el.classList.contains('no-upper')) return;
+  if(el.tagName === 'INPUT' && ['text','search'].includes(el.type) && !el.classList.contains('no-upper')) {
+    const bas = el.selectionStart, son = el.selectionEnd;
+    el.value = el.value.replace(/i/g, 'İ').replace(/ı/g, 'I').replace(/ğ/g, 'Ğ').replace(/ü/g, 'Ü').replace(/ş/g, 'Ş').replace(/ö/g, 'Ö').replace(/ç/g, 'Ç').toUpperCase();
+    el.dispatchEvent(new Event('input', { bubbles: false }));
+    try { el.setSelectionRange(bas, son); } catch(_) {}
+  }
+}, true);
+
+window.TarihYardimci = {
+  _format(d) { return d ? d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0') : ''; },
+  gunEkle(tStr, gun) { let d = new Date(tStr); d.setDate(d.getDate() + parseInt(gun)); return this._format(d); },
+  bugun() { return this._format(new Date()); }
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,791 @@
+{% extends "base.html" %}
+{% block title %}Çek / Senet Takibi{% endblock %}
+{% block header_title %}Çek ve Senet Takibi{% endblock %}
+{% block content %}
+<style>
+  /* ─── Üst aksiyon barı ─── */
+  .cek-top-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--bg-surface); padding: 16px 24px;
+    border-radius: var(--radius-md); border: 1px solid var(--border-soft);
+    margin-bottom: 20px; box-shadow: var(--shadow-blur);
+    flex-wrap: wrap; gap: 16px;
+  }
+  .cek-top-bar h2 { font-size: 16px; font-weight: 700; color: var(--text-main); }
+
+  /* ─── Özet kartları ─── */
+  .cek-ozet-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px; margin-bottom: 22px;
+  }
+  .cek-ozet-kart {
+    background: var(--bg-surface); border: 1px solid var(--border-soft);
+    border-radius: var(--radius-md); padding: 18px 20px; box-shadow: var(--shadow-blur);
+    border-top: 3px solid var(--border-mid);
+  }
+  .cek-ozet-kart.alinan { border-top-color: var(--success); }
+  .cek-ozet-kart.verilen { border-top-color: var(--danger); }
+  .cek-ozet-kart.yaklasan { border-top-color: var(--warn); }
+  .cek-ozet-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); margin-bottom: 8px; }
+  .cek-ozet-tutar { font-size: 24px; font-weight: 800; color: var(--text-main); font-family: monospace; line-height: 1.2; }
+  .cek-ozet-tutar.alinan { color: var(--success); }
+  .cek-ozet-tutar.verilen { color: var(--danger); }
+  .cek-ozet-alt { font-size: 12px; color: var(--text-light); margin-top: 6px; }
+
+  /* ─── Sekmeler ─── */
+  .cek-sekme-bar { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+  .cek-sekme {
+    padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border-mid); background: var(--bg-surface);
+    color: var(--text-muted); transition: all 0.15s;
+  }
+  .cek-sekme.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .cek-sekme:hover:not(.active) { background: var(--bg-body); }
+
+  /* ─── Filtre ─── */
+  .cek-filtre { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; align-items: flex-end; }
+  .cek-filtre .fi { display: flex; flex-direction: column; gap: 5px; }
+  .cek-filtre label { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+  .cek-filtre select, .cek-filtre input {
+    padding: 8px 12px; border: 1px solid var(--border-mid); border-radius: var(--radius-sm);
+    font-size: 13px; background: var(--bg-surface); color: var(--text-main); font-family: inherit;
+  }
+
+  /* ─── Tablo ─── */
+  .cek-card { background: var(--bg-surface); border: 1px solid var(--border-soft); border-radius: var(--radius-md); box-shadow: var(--shadow-blur); overflow: hidden; }
+  .cek-tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .cek-tbl th {
+    background: var(--bg-body); padding: 12px 14px; text-align: left; font-size: 11px;
+    text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border-soft); white-space: nowrap;
+  }
+  .cek-tbl th.r, .cek-tbl td.r { text-align: right; }
+  .cek-tbl td { padding: 11px 14px; border-bottom: 1px solid var(--border-soft); color: var(--text-main); vertical-align: middle; }
+  .cek-tbl tr:last-child td { border-bottom: none; }
+  .cek-tbl tbody tr:hover { background: var(--bg-body); }
+
+  /* ─── Durum rozetleri ─── */
+  .durum-rozet { padding: 3px 10px; border-radius: 30px; font-size: 11px; font-weight: 700; display: inline-block; white-space: nowrap; }
+  .d-Portfoyde     { background: var(--info-bg); color: var(--info); }
+  .d-TahsildeBanka { background: var(--warn-bg); color: var(--warn); }
+  .d-Teminatta     { background: #EDE9F5; color: #7C5BBF; }
+  .d-CiroEdildi    { background: #E8EFE9; color: #5B8C6E; }
+  .d-TahsilEdildi  { background: var(--success-bg); color: var(--success); }
+  .d-Odendi        { background: var(--success-bg); color: var(--success); }
+  .d-Verildi       { background: var(--info-bg); color: var(--info); }
+  .d-Karsiliksiz   { background: var(--danger-bg); color: var(--danger); }
+  .d-Iade          { background: #F0EEE9; color: var(--text-muted); }
+
+  /* ─── Kalan gün rozetleri ─── */
+  .gun-rozet { font-weight: 700; font-size: 12px; white-space: nowrap; }
+  .gun-gecti { color: var(--danger); }
+  .gun-yakin { color: var(--warn); }
+  .gun-normal { color: var(--text-muted); }
+
+  /* ─── Aksiyon menüsü ─── */
+  .cek-aksiyon-btn {
+    padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    border: 1px solid var(--border-mid); background: var(--bg-surface); color: var(--text-muted);
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .cek-aksiyon-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+  /* ─── Modal ─── */
+  .cek-modal-overlay { position: fixed; inset: 0; background: rgba(40,40,40,0.4); z-index: 1000; display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto; }
+  .cek-modal { background: var(--bg-surface); border-radius: var(--radius-lg); width: 100%; max-width: 640px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+  .cek-modal-header { padding: 18px 24px; border-bottom: 1px solid var(--border-soft); display: flex; justify-content: space-between; align-items: center; }
+  .cek-modal-header h3 { font-size: 16px; font-weight: 700; color: var(--text-main); }
+  .cek-modal-body { padding: 22px 24px; }
+  .cek-modal-footer { padding: 16px 24px; border-top: 1px solid var(--border-soft); display: flex; justify-content: flex-end; gap: 10px; }
+  .cek-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .cek-form-grid .full { grid-column: 1 / -1; }
+  .cek-form-group { display: flex; flex-direction: column; gap: 5px; }
+  .cek-form-group label { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+  .cek-form-group input, .cek-form-group select, .cek-form-group textarea {
+    padding: 9px 12px; border: 1px solid var(--border-mid); border-radius: var(--radius-sm);
+    font-size: 13px; background: var(--bg-surface); color: var(--text-main); font-family: inherit; outline: none;
+  }
+  .cek-form-group input:focus, .cek-form-group select:focus { border-color: var(--primary); }
+
+  /* ─── Butonlar ─── */
+  .btn { padding: 9px 18px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all 0.15s; font-family: inherit; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { opacity: 0.9; }
+  .btn-outline { background: transparent; color: var(--text-main); border-color: var(--border-mid); }
+  .btn-outline:hover { background: var(--bg-body); }
+  .btn-danger { background: var(--danger); color: #fff; }
+
+  .empty-msg { text-align: center; padding: 50px 20px; color: var(--text-light); font-style: italic; }
+  .yon-badge { font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 700; }
+  .yon-alinan { background: var(--success-bg); color: var(--success); }
+  .yon-verilen { background: var(--danger-bg); color: var(--danger); }
+</style>
+
+<div x-data="cekApp()" x-init="init()">
+
+  <!-- ÜST BAR -->
+  <div class="cek-top-bar">
+    <h2>Çek ve Senet Yönetimi</h2>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn-outline" @click="yeniCekAc('verilen')">+ Verilen Çek</button>
+      <button class="btn btn-primary" @click="yeniCekAc('alinan')">+ Alınan Çek</button>
+      <button class="btn btn-secondary" style="margin-left:8px;" @click="window.open('/api/export/cek?format=xlsx','_blank')" title="Excel'e aktar">📊 Excel</button>
+      <button class="btn btn-secondary" @click="window.open('/api/export/cek?format=pdf','_blank')" title="PDF'e aktar">📄 PDF</button>
+    </div>
+  </div>
+
+  <!-- ÖZET KARTLARI -->
+  <div class="cek-ozet-grid">
+    <div class="cek-ozet-kart alinan">
+      <div class="cek-ozet-label">📥 Portföydeki Alınan Çekler</div>
+      <div class="cek-ozet-tutar alinan" x-text="formatTutarlar(ozet.alinan_toplam)"></div>
+      <div class="cek-ozet-alt"><span x-text="ozet.alinan_adet"></span> adet · tahsil bekliyor</div>
+    </div>
+    <div class="cek-ozet-kart verilen">
+      <div class="cek-ozet-label">📤 Verilen Çekler</div>
+      <div class="cek-ozet-tutar verilen" x-text="formatTutarlar(ozet.verilen_toplam)"></div>
+      <div class="cek-ozet-alt"><span x-text="ozet.verilen_adet"></span> adet · ödeme bekliyor</div>
+    </div>
+    <div class="cek-ozet-kart yaklasan">
+      <div class="cek-ozet-label">⏰ Vadesi Yaklaşan (30 gün)</div>
+      <div class="cek-ozet-tutar" x-text="(ozet.yaklasan_alinan.length + ozet.yaklasan_verilen.length)"></div>
+      <div class="cek-ozet-alt">çek vade tarihi yaklaşıyor</div>
+    </div>
+  </div>
+
+  <!-- VADE HATIRLATMALARI (varsa) -->
+  <template x-if="yaklasanTumu.length > 0">
+    <div class="cek-card" style="margin-bottom:22px; border-left:3px solid var(--warn);">
+      <div style="padding:12px 16px; font-weight:700; font-size:13px; color:var(--warn); border-bottom:1px solid var(--border-soft); background:var(--warn-bg);">
+        ⏰ Vade Hatırlatmaları — Yaklaşan ve Geçmiş Çekler
+      </div>
+      <table class="cek-tbl">
+        <thead><tr><th>Yön</th><th>Vade</th><th>Kalan</th><th>Cari</th><th class="r">Tutar</th><th>Durum</th></tr></thead>
+        <tbody>
+          <template x-for="c in yaklasanTumu" :key="c.id">
+            <tr>
+              <td><span class="yon-badge" :class="c.yon === 'alinan' ? 'yon-alinan' : 'yon-verilen'" x-text="c.yon === 'alinan' ? 'ALINAN' : 'VERİLEN'"></span></td>
+              <td x-text="c.vade_goster"></td>
+              <td><span class="gun-rozet" :class="gunSinif(c.kalan_gun)" x-text="kalanGunText(c.kalan_gun)"></span></td>
+              <td x-text="c.cari_unvan || '—'"></td>
+              <td class="r" style="font-weight:700;" x-text="fmt(c.tutar) + ' ' + c.doviz"></td>
+              <td><span class="durum-rozet" :class="'d-' + c.durum.replace(' ','')" x-text="durumText(c.durum)"></span></td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </template>
+
+  <!-- SEKMELER -->
+  <div class="cek-sekme-bar">
+    <button class="cek-sekme" :class="aktifYon === '' ? 'active' : ''" @click="aktifYon=''; listele()">Tümü</button>
+    <button class="cek-sekme" :class="aktifYon === 'alinan' ? 'active' : ''" @click="aktifYon='alinan'; listele()">📥 Alınan Çekler</button>
+    <button class="cek-sekme" :class="aktifYon === 'verilen' ? 'active' : ''" @click="aktifYon='verilen'; listele()">📤 Verilen Çekler</button>
+  </div>
+
+  <!-- FİLTRE -->
+  <div class="cek-filtre">
+    <div class="fi">
+      <label>Durum</label>
+      <select x-model="filtreDurum" @change="listele()">
+        <option value="">Tümü</option>
+        <option value="Portfoyde">Portföyde</option>
+        <option value="TahsildeBanka">Tahsilde (Banka)</option>
+        <option value="Teminatta">Teminatta</option>
+        <option value="Ciro Edildi">Ciro Edildi</option>
+        <option value="Tahsil Edildi">Tahsil Edildi</option>
+        <option value="Verildi">Verildi</option>
+        <option value="Odendi">Ödendi</option>
+        <option value="Karsiliksiz">Karşılıksız</option>
+      </select>
+    </div>
+    <div class="fi" style="margin-left:auto; align-self:center;">
+      <span style="font-size:12px; color:var(--text-muted);" x-text="cekler.length + ' çek'"></span>
+    </div>
+  </div>
+
+  <!-- ÇEK LİSTESİ -->
+  <div class="cek-card">
+    <table class="cek-tbl">
+      <thead>
+        <tr>
+          <th>Yön</th>
+          <th>Çek No</th>
+          <th>Banka / Keşideci</th>
+          <th>Vade</th>
+          <th>Kalan Gün</th>
+          <th>Cari</th>
+          <th class="r">Tutar</th>
+          <th>Durum</th>
+          <th class="r">İşlemler</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="c in cekler" :key="c.id">
+          <tr>
+            <td><span class="yon-badge" :class="c.yon === 'alinan' ? 'yon-alinan' : 'yon-verilen'" x-text="c.yon === 'alinan' ? 'ALINAN' : 'VERİLEN'"></span></td>
+            <td style="font-family:monospace; font-weight:600;" x-text="c.cek_no || '—'"></td>
+            <td>
+              <div style="font-weight:600;" x-text="c.banka_adi || '—'"></div>
+              <div style="font-size:11px; color:var(--text-light);" x-text="c.hesap_sahibi || ''"></div>
+            </td>
+            <td style="white-space:nowrap;" x-text="c.vade_goster"></td>
+            <td><span class="gun-rozet" :class="gunSinif(c.kalan_gun)" x-text="kalanGunText(c.kalan_gun)"></span></td>
+            <td x-text="c.cari_unvan || '—'"></td>
+            <td class="r" style="font-weight:700; font-family:monospace;" x-text="fmt(c.tutar) + ' ' + c.doviz"></td>
+            <td><span class="durum-rozet" :class="'d-' + c.durum.replace(' ','')" x-text="durumText(c.durum)"></span></td>
+            <td class="r">
+              <button class="cek-aksiyon-btn" @click="aksiyonAc(c)">İşlem ▾</button>
+            </td>
+          </tr>
+        </template>
+        <tr x-show="cekler.length === 0">
+          <td colspan="9" class="empty-msg">Çek kaydı bulunamadı. Yukarıdan yeni çek ekleyebilirsiniz.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══ YENİ/DÜZENLE ÇEK MODALI ═══ -->
+  <template x-if="modal">
+    <div class="cek-modal-overlay" @click.self="modal=false">
+      <div class="cek-modal">
+        <div class="cek-modal-header">
+          <h3 x-text="(form.id ? 'Çek Düzenle' : 'Yeni ' + (form.yon === 'alinan' ? 'Alınan' : 'Verilen') + ' Çek')"></h3>
+          <button class="cek-aksiyon-btn" @click="modal=false">✕</button>
+        </div>
+        <div class="cek-modal-body">
+          <div class="cek-form-grid">
+            <div class="cek-form-group">
+              <label>Tip</label>
+              <select x-model="form.tip">
+                <option value="cek">Çek</option>
+                <option value="senet">Senet</option>
+              </select>
+            </div>
+            <div class="cek-form-group">
+              <label>Çek / Senet No</label>
+              <input type="text" x-model="form.cek_no" placeholder="Örn: 1234567">
+            </div>
+            <div class="cek-form-group">
+              <label>Tutar *</label>
+              <input type="number" step="0.01" x-model="form.tutar" placeholder="0.00">
+            </div>
+            <div class="cek-form-group">
+              <label>Döviz</label>
+              <select x-model="form.doviz">
+                <option value="TRY">TRY</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+              </select>
+            </div>
+            <div class="cek-form-group">
+              <label>Keşide Tarihi</label>
+              <input type="date" x-model="form.keside_tarihi">
+            </div>
+            <div class="cek-form-group">
+              <label>Vade Tarihi *</label>
+              <input type="date" x-model="form.vade_tarihi">
+            </div>
+            <div class="cek-form-group">
+              <label>Banka</label>
+              <input type="text" x-model="form.banka_adi" placeholder="Çekin bankası">
+            </div>
+            <div class="cek-form-group">
+              <label>Şube</label>
+              <input type="text" x-model="form.sube" placeholder="Şube">
+            </div>
+            <div class="cek-form-group full">
+              <label x-text="form.yon === 'alinan' ? 'Keşideci (çeki düzenleyen)' : 'Keşideci'"></label>
+              <input type="text" x-model="form.hesap_sahibi" placeholder="Çeki düzenleyen kişi/firma">
+            </div>
+            <div class="cek-form-group full">
+              <label x-text="form.yon === 'alinan' ? 'Müşteri (kimden alındı)' : 'Tedarikçi (kime verildi)'"></label>
+              <select x-model="form.cari_id" @change="formAcikFaturalariYukle()">
+                <option value="">— Cari seçin (opsiyonel) —</option>
+                <template x-for="c in cariListesi" :key="c.id">
+                  <option :value="c.id" x-text="c.unvan"></option>
+                </template>
+              </select>
+            </div>
+            <div class="cek-form-group full" x-show="form.cari_id">
+              <label>Faturaya bağla <span style="font-weight:400; color:var(--text-light);" x-text="form.yon === 'alinan' ? '(satış faturaları)' : '(alış faturaları)'"></span></label>
+              <select x-model="form.fatura_id">
+                <option value="">— Fatura seçmeden kaydet —</option>
+                <template x-for="f in formAcikFaturalar" :key="f.id">
+                  <option :value="f.id" x-text="f.fatura_no + ' — Kalan: ' + fmt(f.kalan) + ' ' + f.doviz"></option>
+                </template>
+              </select>
+              <div x-show="formAcikFaturalar.length === 0 && form.cari_id" style="font-size:11px; color:#92400e; margin-top:4px;">
+                Bu cariye ait açık fatura bulunamadı (çek yine de kaydedilebilir).
+              </div>
+            </div>
+            <div class="cek-form-group full">
+              <label>Açıklama</label>
+              <input type="text" x-model="form.aciklama" placeholder="Not...">
+            </div>
+          </div>
+        </div>
+        <div class="cek-modal-footer">
+          <button class="btn btn-outline" @click="modal=false">İptal</button>
+          <button class="btn btn-primary" @click="kaydet()" x-text="form.id ? 'Güncelle' : 'Kaydet'"></button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- ═══ AKSİYON MODALI (durum değiştir) ═══ -->
+  <template x-if="aksiyonModal">
+    <div class="cek-modal-overlay" @click.self="aksiyonModal=false">
+      <div class="cek-modal" style="max-width:520px;">
+        <div class="cek-modal-header">
+          <h3>Çek İşlemi</h3>
+          <button class="cek-aksiyon-btn" @click="aksiyonModal=false">✕</button>
+        </div>
+        <div class="cek-modal-body">
+          <!-- Çek özeti -->
+          <div style="background:var(--bg-body); border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:18px; font-size:13px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="color:var(--text-muted);">Çek No:</span>
+              <strong x-text="seciliCek.cek_no || seciliCek.id"></strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="color:var(--text-muted);">Tutar:</span>
+              <strong x-text="fmt(seciliCek.tutar) + ' ' + seciliCek.doviz"></strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+              <span style="color:var(--text-muted);">Vade:</span>
+              <strong x-text="seciliCek.vade_goster"></strong>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:var(--text-muted);">Durum:</span>
+              <span class="durum-rozet" :class="'d-' + (seciliCek.durum||'').replace(' ','')" x-text="durumText(seciliCek.durum)"></span>
+            </div>
+          </div>
+
+          <!-- Aksiyon butonları (duruma ve yöne göre) -->
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <!-- ALINAN ÇEK aksiyonları -->
+            <template x-if="seciliCek.yon === 'alinan' && seciliCek.durum === 'Portfoyde'">
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <button class="btn btn-outline" @click="aksiyonSecildi('tahsile_ver')">🏦 Bankaya Tahsile Ver</button>
+                <button class="btn btn-outline" @click="aksiyonSecildi('ciro')">🔄 Ciro Et (başka cariye devret)</button>
+                <button class="btn btn-outline" @click="aksiyonSecildi('teminat')">🔐 Teminata Ver (kredi için)</button>
+                <button class="btn btn-primary" @click="aksiyonSecildi('tahsil_et')">✓ Tahsil Edildi (kasaya geçti)</button>
+              </div>
+            </template>
+            <template x-if="seciliCek.yon === 'alinan' && (seciliCek.durum === 'TahsildeBanka' || seciliCek.durum === 'Teminatta')">
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <button class="btn btn-primary" @click="aksiyonSecildi('tahsil_et')">✓ Tahsil Edildi</button>
+                <button class="btn btn-outline" @click="aksiyonSecildi('geri_al')">↩ Portföye Geri Al</button>
+              </div>
+            </template>
+            <!-- VERİLEN ÇEK aksiyonları -->
+            <template x-if="seciliCek.yon === 'verilen' && seciliCek.durum === 'Verildi'">
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                <button class="btn btn-primary" @click="aksiyonSecildi('odendi')">✓ Ödendi (kasadan çıktı)</button>
+              </div>
+            </template>
+            <!-- Ortak: karşılıksız / iade -->
+            <template x-if="['Portfoyde','TahsildeBanka','Teminatta','Verildi'].includes(seciliCek.durum)">
+              <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--border-soft); padding-top:8px; margin-top:4px;">
+                <button class="btn btn-outline" style="color:var(--danger); border-color:var(--danger);" @click="aksiyonSecildi('karsiliksiz')">⚠ Karşılıksız Çıktı</button>
+                <button class="btn btn-outline" @click="aksiyonSecildi('iade')">↩ İade Et</button>
+              </div>
+            </template>
+            <!-- Detay/geçmiş -->
+            <template x-if="!seciliCek.fatura_id && seciliCek.cari_id && ['Portfoyde','Verildi','TahsildeBanka','Teminatta'].includes(seciliCek.durum)">
+              <button class="btn btn-outline" style="margin-top:4px;" @click="faturayaBaglaAc()">🔗 Faturaya Bağla</button>
+            </template>
+            <button class="btn btn-outline" style="margin-top:4px;" @click="detayGoster()">📋 Geçmişi Gör</button>
+            <button class="btn btn-outline" style="color:var(--danger);" @click="cekSil(seciliCek.id)">🗑 Çeki İptal Et</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- ═══ AKSİYON DETAY FORMU (banka/cari seçimi gerektiğinde) ═══ -->
+  <template x-if="aksiyonFormModal">
+    <div class="cek-modal-overlay" @click.self="aksiyonFormModal=false">
+      <div class="cek-modal" style="max-width:480px;">
+        <div class="cek-modal-header">
+          <h3 x-text="aksiyonBaslik"></h3>
+          <button class="cek-aksiyon-btn" @click="aksiyonFormModal=false">✕</button>
+        </div>
+        <div class="cek-modal-body">
+          <!-- Banka seçimi (tahsile_ver, teminat) -->
+          <template x-if="aksiyonForm.islem === 'tahsile_ver' || aksiyonForm.islem === 'teminat'">
+            <div class="cek-form-group">
+              <label>Banka Seçin</label>
+              <select x-model="aksiyonForm.banka_id">
+                <option value="">— Banka seçin —</option>
+                <template x-for="b in bankaListesi" :key="b.id">
+                  <option :value="b.id" x-text="b.banka_adi + (b.sube ? ' - ' + b.sube : '')"></option>
+                </template>
+              </select>
+            </div>
+          </template>
+          <!-- Cari seçimi (ciro) -->
+          <template x-if="aksiyonForm.islem === 'ciro'">
+            <div style="display:flex; flex-direction:column; gap:14px;">
+              <div class="cek-form-group">
+                <label>Kime Ciro Edilecek (Cari)</label>
+                <select x-model="aksiyonForm.ciro_cari_id">
+                  <option value="">— Cari seçin —</option>
+                  <template x-for="c in cariListesi" :key="c.id">
+                    <option :value="c.id" x-text="c.unvan"></option>
+                  </template>
+                </select>
+              </div>
+              <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:var(--text-muted);">
+                <input type="checkbox" x-model="aksiyonForm.cari_hareket_olustur" style="width:16px; height:16px;">
+                Bu cariye olan borcumdan düş (cari hareket oluştur)
+              </label>
+            </div>
+          </template>
+          <!-- Kasa seçimi (tahsil_et, odendi) -->
+          <template x-if="aksiyonForm.islem === 'tahsil_et' || aksiyonForm.islem === 'odendi'">
+            <div class="cek-form-group">
+              <label x-text="seciliCek.yon === 'alinan' ? 'Hangi Kasaya Girsin? (opsiyonel)' : 'Hangi Kasadan Çıksın? (opsiyonel)'"></label>
+              <select x-model="aksiyonForm.kasa_id">
+                <option value="">— Kasaya kayıt oluşturma —</option>
+                <template x-for="k in kasaListesi" :key="k.id">
+                  <option :value="k.id" x-text="k.ad + ' (' + k.doviz + ')'"></option>
+                </template>
+              </select>
+            </div>
+          </template>
+          <div class="cek-form-group" style="margin-top:14px;">
+            <label>Açıklama (opsiyonel)</label>
+            <input type="text" x-model="aksiyonForm.aciklama" placeholder="Not...">
+          </div>
+        </div>
+        <div class="cek-modal-footer">
+          <button class="btn btn-outline" @click="aksiyonFormModal=false">İptal</button>
+          <button class="btn btn-primary" @click="aksiyonUygula()">Onayla</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- ═══ GEÇMİŞ MODALI ═══ -->
+  <template x-if="detayModal">
+    <div class="cek-modal-overlay" @click.self="detayModal=false">
+      <div class="cek-modal" style="max-width:560px;">
+        <div class="cek-modal-header">
+          <h3>Çek Geçmişi</h3>
+          <button class="cek-aksiyon-btn" @click="detayModal=false">✕</button>
+        </div>
+        <div class="cek-modal-body">
+          <table class="cek-tbl">
+            <thead><tr><th>Tarih</th><th>İşlem</th><th>Durum</th><th>Açıklama</th></tr></thead>
+            <tbody>
+              <template x-for="(h, i) in detayHareketler" :key="i">
+                <tr>
+                  <td x-text="h.tarih"></td>
+                  <td style="font-weight:600;" x-text="h.islem"></td>
+                  <td><span class="durum-rozet" :class="'d-' + (h.yeni_durum||'').replace(' ','')" x-text="durumText(h.yeni_durum)"></span></td>
+                  <td style="font-size:12px; color:var(--text-muted);" x-text="h.aciklama || '—'"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- ═══ FATURAYA BAĞLA MODALI ═══ -->
+  <template x-if="faturaBaglaModal">
+    <div class="cek-modal-overlay" @click.self="faturaBaglaModal=false">
+      <div class="cek-modal" style="max-width:520px;">
+        <div class="cek-modal-header">
+          <h3>Çeki Faturaya Bağla</h3>
+          <button class="cek-aksiyon-btn" @click="faturaBaglaModal=false">✕</button>
+        </div>
+        <div class="cek-modal-body">
+          <div style="background:var(--bg-body); border-radius:var(--radius-sm); padding:12px 14px; margin-bottom:16px; font-size:13px;">
+            <div style="display:flex; justify-content:space-between;">
+              <span style="color:var(--text-muted);">Çek:</span>
+              <strong x-text="(seciliCek.cek_no || seciliCek.id) + ' — ' + fmt(seciliCek.tutar) + ' ' + seciliCek.doviz"></strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:4px;">
+              <span style="color:var(--text-muted);">Cari:</span>
+              <strong x-text="seciliCek.cari_unvan || '—'"></strong>
+            </div>
+          </div>
+          <div class="cek-form-group">
+            <label>Hangi faturaya karşılık? <span style="font-weight:400; color:var(--text-light);" x-text="seciliCek.yon === 'alinan' ? '(satış faturaları)' : '(alış faturaları)'"></span></label>
+            <select x-model="faturaBaglaSecim">
+              <option value="">— Açık fatura seçin —</option>
+              <template x-for="f in baglaFaturalar" :key="f.id">
+                <option :value="f.id" x-text="f.fatura_no + ' — Kalan: ' + fmt(f.kalan) + ' ' + f.doviz"></option>
+              </template>
+            </select>
+            <div x-show="baglaFaturalar.length === 0" style="font-size:12px; color:#92400e; margin-top:8px;">
+              Bu cariye ait açık fatura bulunamadı.
+            </div>
+          </div>
+          <div style="font-size:12px; color:var(--success); margin-top:10px;">
+            ℹ️ Çek bu faturaya bağlanınca, fatura bakiyesi çek tutarı kadar düşecek.
+          </div>
+        </div>
+        <div class="cek-modal-footer">
+          <button class="btn btn-outline" @click="faturaBaglaModal=false">İptal</button>
+          <button class="btn btn-primary" @click="faturayaBagla()">Bağla</button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function cekApp() {
+  return {
+    cekler: [],
+    ozet: { alinan_adet: 0, alinan_toplam: {}, verilen_adet: 0, verilen_toplam: {}, yaklasan_alinan: [], yaklasan_verilen: [] },
+    cariListesi: [],
+    bankaListesi: [],
+    kasaListesi: [],
+    aktifYon: '',
+    filtreDurum: '',
+    modal: false,
+    aksiyonModal: false,
+    aksiyonFormModal: false,
+    detayModal: false,
+    faturaBaglaModal: false,
+    faturaBaglaSecim: '',
+    baglaFaturalar: [],
+    seciliCek: {},
+    detayHareketler: [],
+    form: {},
+    formAcikFaturalar: [],
+    aksiyonForm: {},
+    aksiyonBaslik: '',
+
+    get yaklasanTumu() {
+      return [...(this.ozet.yaklasan_alinan || []), ...(this.ozet.yaklasan_verilen || [])]
+        .sort((a, b) => (a.kalan_gun ?? 9999) - (b.kalan_gun ?? 9999));
+    },
+
+    async init() {
+      await Promise.all([this.listele(), this.ozetYukle(), this.lookupYukle()]);
+    },
+
+    async listele() {
+      const p = new URLSearchParams();
+      if (this.aktifYon) p.set('yon', this.aktifYon);
+      if (this.filtreDurum) p.set('durum', this.filtreDurum);
+      try {
+        const r = await fetch('/api/cek?' + p).then(r => r.json());
+        this.cekler = r.data || [];
+      } catch (e) { Utils.error('Çek listesi yüklenemedi: ' + e.message); }
+    },
+
+    async ozetYukle() {
+      try {
+        const r = await fetch('/api/cek/ozet').then(r => r.json());
+        if (r.ok) this.ozet = r;
+      } catch (e) { console.error(e); }
+    },
+
+    async lookupYukle() {
+      try {
+        const cr = await fetch('/api/cari?per_page=1000').then(r => r.json());
+        this.cariListesi = (cr.data || []).map(c => ({ id: c.id, unvan: c.unvan }));
+      } catch (e) { this.cariListesi = []; }
+      try {
+        const br = await fetch('/api/banka').then(r => r.json());
+        this.bankaListesi = Array.isArray(br) ? br : (br.data || []);
+      } catch (e) { this.bankaListesi = []; }
+      try {
+        const kr = await fetch('/api/kasa').then(r => r.json());
+        this.kasaListesi = (kr.data || kr || []).map(k => ({ id: k.id, ad: k.ad || k.kasa_adi || k.isim || ('Kasa ' + k.id), doviz: k.doviz || 'TRY' }));
+      } catch (e) { this.kasaListesi = []; }
+    },
+
+    yeniCekAc(yon) {
+      this.form = {
+        id: null, yon: yon, tip: 'cek',
+        cek_no: '', banka_adi: '', sube: '', hesap_sahibi: '',
+        tutar: '', doviz: 'TRY',
+        keside_tarihi: new Date().toISOString().slice(0, 10),
+        vade_tarihi: '',
+        cari_id: '', fatura_id: '', aciklama: ''
+      };
+      this.formAcikFaturalar = [];
+      this.modal = true;
+    },
+
+    async formAcikFaturalariYukle() {
+      this.form.fatura_id = '';
+      this.formAcikFaturalar = [];
+      if (!this.form.cari_id) return;
+      // Alınan çek → satış faturaları, verilen çek → alış faturaları
+      const yon = this.form.yon === 'alinan' ? 'satis' : 'alis';
+      try {
+        const r = await fetch('/api/cari/' + this.form.cari_id + '/acik_faturalar?yon=' + yon).then(r => r.json());
+        if (r.ok && Array.isArray(r.faturalar)) this.formAcikFaturalar = r.faturalar;
+      } catch (e) { this.formAcikFaturalar = []; }
+    },
+
+    async kaydet() {
+      if (!this.form.tutar || parseFloat(this.form.tutar) <= 0) { Utils.error('Tutar giriniz'); return; }
+      if (!this.form.vade_tarihi) { Utils.error('Vade tarihi zorunlu'); return; }
+      try {
+        const url = this.form.id ? '/api/cek/' + this.form.id : '/api/cek';
+        const method = this.form.id ? 'PUT' : 'POST';
+        const r = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(this.form) }).then(r => r.json());
+        if (r.ok) {
+          Utils.success(r.mesaj || 'Kaydedildi');
+          this.modal = false;
+          await Promise.all([this.listele(), this.ozetYukle()]);
+        } else { Utils.error(r.mesaj); }
+      } catch (e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    aksiyonAc(c) {
+      this.seciliCek = c;
+      this.aksiyonModal = true;
+    },
+
+    aksiyonSecildi(islem) {
+      // Banka/cari/kasa seçimi gerektiren işlemler için ikinci modal aç
+      this.aksiyonForm = { islem: islem, banka_id: '', ciro_cari_id: '', kasa_id: '', aciklama: '', cari_hareket_olustur: false };
+      const basliklar = {
+        tahsile_ver: 'Bankaya Tahsile Ver', teminat: 'Teminata Ver',
+        ciro: 'Çeki Ciro Et', tahsil_et: 'Tahsil Edildi', odendi: 'Ödendi İşaretle'
+      };
+      // Doğrudan onay (ek bilgi gerekmeyen) işlemler
+      if (['karsiliksiz', 'iade', 'geri_al'].includes(islem)) {
+        const mesajlar = {
+          karsiliksiz: 'Bu çek karşılıksız olarak işaretlenecek. Emin misiniz?',
+          iade: 'Bu çek iade edilecek. Emin misiniz?',
+          geri_al: 'Çek portföye geri alınacak. Emin misiniz?'
+        };
+        this.dogrudanUygula(islem, mesajlar[islem]);
+        return;
+      }
+      this.aksiyonBaslik = basliklar[islem] || 'Çek İşlemi';
+      this.aksiyonModal = false;
+      this.aksiyonFormModal = true;
+    },
+
+    async dogrudanUygula(islem, onayMesaji) {
+      if (onayMesaji && !(await Utils.confirm(onayMesaji))) return;
+      await this.durumGonder({ islem: islem });
+    },
+
+    async aksiyonUygula() {
+      // Validasyon
+      const f = this.aksiyonForm;
+      if ((f.islem === 'tahsile_ver' || f.islem === 'teminat') && !f.banka_id) { Utils.error('Banka seçiniz'); return; }
+      if (f.islem === 'ciro' && !f.ciro_cari_id) { Utils.error('Ciro edilecek cari seçiniz'); return; }
+      await this.durumGonder(f);
+    },
+
+    async durumGonder(payload) {
+      try {
+        const r = await fetch('/api/cek/' + this.seciliCek.id + '/durum', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).then(r => r.json());
+        if (r.ok) {
+          Utils.success(r.mesaj || 'İşlem tamam');
+          this.aksiyonModal = false;
+          this.aksiyonFormModal = false;
+          await Promise.all([this.listele(), this.ozetYukle()]);
+        } else { Utils.error(r.mesaj); }
+      } catch (e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async faturayaBaglaAc() {
+      this.faturaBaglaSecim = '';
+      this.baglaFaturalar = [];
+      this.aksiyonModal = false;
+      // Cariye ait açık faturaları yükle (alınan çek → satış, verilen çek → alış)
+      const yon = this.seciliCek.yon === 'alinan' ? 'satis' : 'alis';
+      try {
+        const r = await fetch('/api/cari/' + this.seciliCek.cari_id + '/acik_faturalar?yon=' + yon).then(r => r.json());
+        if (r.ok && Array.isArray(r.faturalar)) this.baglaFaturalar = r.faturalar;
+      } catch (e) { this.baglaFaturalar = []; }
+      this.faturaBaglaModal = true;
+    },
+
+    async faturayaBagla() {
+      if (!this.faturaBaglaSecim) { Utils.error('Fatura seçin'); return; }
+      try {
+        const r = await fetch('/api/cek/' + this.seciliCek.id + '/faturaya_bagla', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fatura_id: this.faturaBaglaSecim })
+        }).then(r => r.json());
+        if (r.ok) {
+          Utils.success(r.mesaj || 'Faturaya bağlandı');
+          this.faturaBaglaModal = false;
+          await Promise.all([this.listele(), this.ozetYukle()]);
+        } else { Utils.error(r.mesaj); }
+      } catch (e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    async detayGoster() {
+      try {
+        const r = await fetch('/api/cek/' + this.seciliCek.id).then(r => r.json());
+        if (r.ok) {
+          this.detayHareketler = r.data.hareketler || [];
+          this.aksiyonModal = false;
+          this.detayModal = true;
+        }
+      } catch (e) { Utils.error('Geçmiş yüklenemedi'); }
+    },
+
+    async cekSil(id) {
+      if (!(await Utils.confirm('Bu çek kaydı iptal edilecek. Emin misiniz?'))) return;
+      try {
+        const r = await fetch('/api/cek/' + id, { method: 'DELETE' }).then(r => r.json());
+        if (r.ok) {
+          Utils.success(r.mesaj || 'İptal edildi');
+          this.aksiyonModal = false;
+          await Promise.all([this.listele(), this.ozetYukle()]);
+        } else { Utils.error(r.mesaj); }
+      } catch (e) { Utils.error('Hata: ' + e.message); }
+    },
+
+    // ─── Yardımcılar ───
+    fmt(n) {
+      n = parseFloat(n) || 0;
+      return n.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    },
+    formatTutarlar(obj) {
+      if (!obj || Object.keys(obj).length === 0) return '0,00';
+      return Object.entries(obj).map(([d, v]) => this.fmt(v) + ' ' + d).join(' · ');
+    },
+    kalanGunText(g) {
+      if (g === null || g === undefined) return '—';
+      if (g < 0) return Math.abs(g) + ' gün geçti';
+      if (g === 0) return 'Bugün!';
+      return g + ' gün kaldı';
+    },
+    gunSinif(g) {
+      if (g === null || g === undefined) return 'gun-normal';
+      if (g < 0) return 'gun-gecti';
+      if (g <= 7) return 'gun-yakin';
+      return 'gun-normal';
+    },
+    durumText(d) {
+      const map = {
+        'Portfoyde': 'Portföyde', 'TahsildeBanka': 'Tahsilde', 'Teminatta': 'Teminatta',
+        'Ciro Edildi': 'Ciro Edildi', 'Tahsil Edildi': 'Tahsil Edildi', 'Odendi': 'Ödendi',
+        'Verildi': 'Verildi', 'Karsiliksiz': 'Karşılıksız',
+        'Iade Edildi': 'İade Edildi', 'Iade Alindi': 'İade Alındı'
+      };
+      return map[d] || d;
+    }
+  };
+}
+</script>
+{% endblock %}
