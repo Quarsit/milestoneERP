@@ -147,6 +147,15 @@
     <button class="rapor-tab-btn" :class="aktifTab === 'stok_durum' ? 'active' : ''" @click="tabAc('stok_durum')">Depo Envanter Dağılımı</button>
     <button class="rapor-tab-btn" :class="aktifTab === 'satis_perf' ? 'active' : ''" @click="tabAc('satis_perf')">Satış & Müşteri Analizi</button>
     <button class="rapor-tab-btn" :class="aktifTab === 'maliyet_analiz' ? 'active' : ''" @click="tabAc('maliyet_analiz')">Proje Maliyet Analizi</button>
+    <span style="margin-left:auto; font-size:10px; color:#94A3B8; font-weight:700; align-self:center; padding:0 8px;">R-v4</span>
+  </div>
+
+  <!-- Teşhis satırı: her sekme yüklemesinde HTTP durumu ve kayıt sayısı -->
+  <div x-show="sonYukleme" style="font-size:11px; color:#64748B; margin-bottom:10px; font-family:monospace;" x-text="sonYukleme"></div>
+
+  <!-- Rapor yükleme hatası bandı (401 / backend hatası burada GÖRÜNÜR olur) -->
+  <div x-show="raporHata" style="background:#FEE2E2; border:1px solid #FCA5A5; color:#991B1B; padding:10px 14px; border-radius:8px; margin-bottom:14px; font-size:13px; font-weight:600;">
+    ⚠️ <span x-text="raporHata"></span>
   </div>
 
   <!-- ═══ 1. YAŞLANDIRILMIŞ CARI ═══ -->
@@ -243,7 +252,7 @@
             </tr>
           </thead>
           <tbody>
-            <template x-for="c in (stokRapor.cins_listesi || [])" :key="c.cins">
+            <template x-for="c in (stokRapor.cins_listesi || [])" :key="(c.tip || '') + '-' + c.cins">
               <tr>
                 <td style="font-weight:700;" x-text="c.cins"></td>
                 <td class="sayi" x-text="c.toplam_adet"></td>
@@ -345,6 +354,8 @@
 function raporlarApp() {
   return {
     aktifTab: 'yaslandirma',
+    raporHata: '',
+    sonYukleme: '',
     yukleniyor: false,
     filtre: { tarih: new Date().toISOString().slice(0, 10), cari_tip: '' },
     rapor: {},
@@ -379,10 +390,22 @@ function raporlarApp() {
 
     async stokDurumYukle() {
       this.yukleniyor = true;
+      this.raporHata = '';
       try {
-        this.stokRapor = await fetch('/api/rapor/stok_durum').then(r => r.json());
+        const r = await fetch('/api/rapor/stok_durum');
+        const d = await r.json();
+        if (r.status === 401 || d.error === 'Unauthorized') {
+          this.raporHata = 'Oturum doğrulanamadı (401). Çıkış yapıp yeniden giriş yapın, sonra bu sayfayı yenileyin.';
+          this.stokRapor = {};
+        } else if (!r.ok || d.ok === false) {
+          this.raporHata = 'Rapor alınamadı (HTTP ' + r.status + '): ' + (d.mesaj || d.error || '');
+          this.stokRapor = {};
+        } else {
+          this.stokRapor = d;
+        }
+        this.sonYukleme = 'stok_durum → HTTP ' + r.status + ' · ' + ((d.cins_listesi||[]).length) + ' cins kaydı';
       } catch(e) {
-        Utils.error('Stok raporu yüklenemedi: ' + e.message);
+        this.raporHata = 'Stok raporu yüklenemedi: ' + e.message;
         this.stokRapor = {};
       } finally {
         this.yukleniyor = false;
@@ -391,10 +414,22 @@ function raporlarApp() {
 
     async satisPerfYukle() {
       this.yukleniyor = true;
+      this.raporHata = '';
       try {
-        this.perfRapor = await fetch('/api/rapor/satis_performans').then(r => r.json());
+        const r = await fetch('/api/rapor/satis_performans');
+        const d = await r.json();
+        if (r.status === 401 || d.error === 'Unauthorized') {
+          this.raporHata = 'Oturum doğrulanamadı (401). Çıkış yapıp yeniden giriş yapın, sonra bu sayfayı yenileyin.';
+          this.perfRapor = {};
+        } else if (!r.ok || d.ok === false) {
+          this.raporHata = 'Rapor alınamadı (HTTP ' + r.status + '): ' + (d.mesaj || d.error || '');
+          this.perfRapor = {};
+        } else {
+          this.perfRapor = d;
+        }
+        this.sonYukleme = 'satis_performans → HTTP ' + r.status + ' · ' + ((d.musteri_listesi||[]).length) + ' müşteri kaydı';
       } catch(e) {
-        Utils.error('Satış performans raporu yüklenemedi: ' + e.message);
+        this.raporHata = 'Satış performans raporu yüklenemedi: ' + e.message;
         this.perfRapor = {};
       } finally {
         this.yukleniyor = false;
@@ -403,10 +438,22 @@ function raporlarApp() {
 
     async maliyetAnalizYukle() {
       this.yukleniyor = true;
+      this.raporHata = '';
       try {
-        this.maliyetRapor = await fetch('/api/rapor/maliyet_analiz').then(r => r.json());
+        const r = await fetch('/api/rapor/maliyet_analiz');
+        const d = await r.json();
+        if (r.status === 401 || d.error === 'Unauthorized') {
+          this.raporHata = 'Oturum doğrulanamadı (401). Çıkış yapıp yeniden giriş yapın, sonra bu sayfayı yenileyin.';
+          this.maliyetRapor = {};
+        } else if (!r.ok || d.ok === false) {
+          this.raporHata = 'Rapor alınamadı (HTTP ' + r.status + '): ' + (d.mesaj || d.error || '');
+          this.maliyetRapor = {};
+        } else {
+          this.maliyetRapor = d;
+        }
+        this.sonYukleme = 'maliyet_analiz → HTTP ' + r.status + ' · ' + ((d.siparisler||[]).length) + ' sipariş kaydı';
       } catch(e) {
-        Utils.error('Maliyet analiz raporu yüklenemedi: ' + e.message);
+        this.raporHata = 'Maliyet analiz raporu yüklenemedi: ' + e.message;
         this.maliyetRapor = {};
       } finally {
         this.yukleniyor = false;
