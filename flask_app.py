@@ -18,6 +18,163 @@ def create_app():
     app = Flask(__name__)
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     app.secret_key = os.environ.get('SECRET_KEY', 'milestone-erp-production')
+
+    # ═══ BELGE ÇEVİRİ SİSTEMİ (_ceviri) ═══
+    # Print şablonları (proforma, commercial invoice, packing list, ekstre)
+    # bu fonksiyonla EN/TR başlık üretir. Anahtar sözlükte yoksa çökmez;
+    # anahtarın son parçasını okunur metne çevirir (load_port → Load Port).
+    _CEVIRI = {
+        'belge.proforma_invoice': ('PROFORMA INVOICE', 'PROFORMA FATURA'),
+        'belge.commercial_invoice': ('COMMERCIAL INVOICE', 'TİCARİ FATURA'),
+        'belge.packing_list': ('PACKING LIST', 'ÇEKİ LİSTESİ'),
+        'belge.date_label': ('Date:', 'Tarih:'),
+        'belge.pi_no': ('PI No:', 'PI No:'),
+        'belge.ci_no': ('CI No:', 'CI No:'),
+        'belge.pl_no': ('PL No:', 'PL No:'),
+        'belge.consignee': ('CONSIGNEE', 'ALICI'),
+        'belge.order_ref': ('Order Ref', 'Sipariş Ref'),
+        'belge.country_origin': ('Country of Origin', 'Menşe Ülke'),
+        'belge.cont_no': ('Cont.', 'Sıra'),
+        'belge.no': ('No', 'No'),
+        'belge.description_of_goods': ('Description of Goods', 'Mal Açıklaması'),
+        'belge.block_no': ('Block No', 'Blok No'),
+        'belge.slab_no': ('Slab No', 'Plaka No'),
+        'belge.crate_no': ('Crate No', 'Kasa No'),
+        'belge.bundle': ('Bundle', 'Bundle'),
+        'belge.spec': ('Spec', 'Özellik'),
+        'belge.special': ('Special', 'Özel'),
+        'belge.surface': ('Surface', 'Yüzey'),
+        'belge.length': ('Length', 'Boy'),
+        'belge.height': ('Height', 'Yükseklik'),
+        'belge.thk': ('Thk', 'Kal.'),
+        'belge.pcs': ('Pcs', 'Adet'),
+        'belge.sqm': ('Sqm', 'm²'),
+        'belge.sqft': ('Sqft', 'Sqft'),
+        'belge.unit': ('Unit', 'Birim'),
+        'belge.price': ('Price', 'Fiyat'),
+        'belge.amount': ('Amount', 'Tutar'),
+        'belge.weight': ('Weight', 'Ağırlık'),
+        'belge.total_weight': ('Total Weight', 'Toplam Ağırlık'),
+        'belge.total_pcs': ('Total Pcs', 'Toplam Adet'),
+        'belge.total_label': ('TOTAL:', 'TOPLAM:'),
+        'belge.totally': ('TOTALLY', 'GENEL TOPLAM'),
+        'belge.subtotal': ('Subtotal', 'Ara Toplam'),
+        'belge.subtotal_gross': ('Gross Subtotal', 'Brüt Ara Toplam'),
+        'belge.subtotal_ex_vat': ('Subtotal (Ex. VAT)', 'Ara Toplam (KDV Hariç)'),
+        'belge.discount': ('Discount', 'İskonto'),
+        'belge.disc': ('Disc.', 'İsk.'),
+        'belge.discount_fixed': ('Discount', 'İskonto'),
+        'belge.item_discounts': ('Item Discounts', 'Kalem İskontoları'),
+        'belge.advance_fixed': ('Advance', 'Avans'),
+        'belge.balance_due': ('Balance Due', 'Kalan Bakiye'),
+        'belge.bank': ('Bank', 'Banka'),
+        'belge.bank_details': ('Bank Details', 'Banka Bilgileri'),
+        'belge.payment': ('Payment', 'Ödeme'),
+        'belge.delivery': ('Delivery', 'Teslimat'),
+        'belge.incoterms': ('Incoterms', 'Teslim Şekli'),
+        'belge.shipment_details': ('Shipment Details', 'Sevkiyat Bilgileri'),
+        'belge.shipment_terms': ('Shipment Terms', 'Sevkiyat Şartları'),
+        'belge.load_port': ('Port of Loading', 'Yükleme Limanı'),
+        'belge.discharge': ('Port of Discharge', 'Varış Limanı'),
+        'belge.container': ('Container', 'Konteyner'),
+        'belge.terms_conditions': ('Terms & Conditions', 'Şartlar ve Koşullar'),
+        'belge.declaration': ('We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.',
+                              'Bu faturanın, tanımlanan malların gerçek fiyatını gösterdiğini ve tüm bilgilerin doğru olduğunu beyan ederiz.'),
+        'belge.buyer_acceptance': ("Buyer's Acceptance", 'Alıcı Onayı'),
+        'belge.customer_approval': ('Customer Approval', 'Müşteri Onayı'),
+        'belge.authorized_signature': ('Authorized Signature', 'Yetkili İmza'),
+        # Ekstre başlıkları
+        'tarih': ('Date', 'Tarih'),
+        'islem_tipi': ('Transaction', 'İşlem Tipi'),
+        'evrak_no': ('Doc No', 'Evrak No'),
+        'aciklama': ('Description', 'Açıklama'),
+        'borc': ('Debit', 'Borç'),
+        'alacak': ('Credit', 'Alacak'),
+        'doviz': ('Currency', 'Döviz'),
+        'kumulatif_bakiye': ('Balance', 'Bakiye'),
+        'toplam_borc': ('Total Debit', 'Toplam Borç'),
+        'toplam_alacak': ('Total Credit', 'Toplam Alacak'),
+        'net_ozet': ('Net Summary', 'Net Özet'),
+        'musteri_bilgileri': ('Customer Details', 'Müşteri Bilgileri'),
+        'musteri_onayi': ('Customer Approval', 'Müşteri Onayı'),
+        'kase_imza': ('Stamp & Signature', 'Kaşe & İmza'),
+        'yetkili_imza': ('Authorized Signature', 'Yetkili İmza'),
+    }
+
+    def _ceviri(anahtar, dil='en'):
+        try:
+            d = str(dil).lower() if dil else 'en'
+        except Exception:
+            d = 'en'
+        cift = _CEVIRI.get(anahtar)
+        if cift:
+            return cift[1] if d.startswith('tr') else cift[0]
+        # Bilinmeyen anahtar: son parçayı okunur yap (belge.load_port → Load Port)
+        son = str(anahtar).split('.')[-1].replace('_', ' ')
+        return son.title()
+
+    app.jinja_env.globals['_ceviri'] = _ceviri
+    app.jinja_env.globals['dil'] = 'en'  # şablonlar dil değişkeni beklerse varsayılan
+
+    # Kategori bazlı değer çevirileri (yüzey işlemi, cari işlem tipi)
+    _YUZEY_EN = {'Cilalı': 'Polished', 'Cilali': 'Polished', 'Honlu': 'Honed', 'Honed': 'Honed',
+                 'Polished': 'Polished', 'Fırçalı': 'Brushed', 'Fircali': 'Brushed', 'Brushed': 'Brushed',
+                 'Eskitme': 'Tumbled', 'Ham': 'Raw', 'Kumlama': 'Sandblasted', 'Patinato': 'Patinato',
+                 'Mat': 'Matte', 'Dolgulu': 'Filled', 'Epoksi': 'Epoxy'}
+    _ISLEM_EN = {'Tahsilat': 'Collection', 'Odeme': 'Payment', 'Ödeme': 'Payment',
+                 'Avans Tahsilati': 'Advance Received', 'Avans Odemesi': 'Advance Paid',
+                 'Avans Devri (Giriş)': 'Advance Transfer (In)', 'Avans Devri (Çıkış)': 'Advance Transfer (Out)',
+                 'Fatura (Satis)': 'Sales Invoice', 'Fatura (Alis)': 'Purchase Invoice',
+                 'Iade (Satis)': 'Sales Return', 'Iade (Alis)': 'Purchase Return',
+                 'Vade Farki (Borc)': 'Late Fee (Debit)', 'Vade Farki (Alacak)': 'Late Fee (Credit)',
+                 'Kur Farki (Borc)': 'FX Diff (Debit)', 'Kur Farki (Alacak)': 'FX Diff (Credit)',
+                 'Çek (Borc)': 'Cheque (Issued)', 'Çek (Alacak)': 'Cheque (Received)',
+                 'Çek Tahsilatı': 'Cheque Collection', 'Mahsup': 'Offset', 'Mahsup (Karşılıklı)': 'Offset (Mutual)',
+                 'Mahsup (Fatura)': 'Offset (Invoice)', 'Bakiye Transfer (Giriş)': 'Balance Transfer (In)',
+                 'Bakiye Transfer (Çıkış)': 'Balance Transfer (Out)', 'Bakiye Transfer (Kasaya)': 'Balance Transfer (Cash)',
+                 'Acilis Bakiyesi': 'Opening Balance'}
+
+    def _deger_cevir(kategori, deger, dil='en'):
+        if deger is None:
+            return ''
+        deger = str(deger)
+        try:
+            d = str(dil).lower() if dil else 'en'
+        except Exception:
+            d = 'en'
+        if d.startswith('tr'):
+            return deger
+        if kategori == 'yuzey':
+            return _YUZEY_EN.get(deger, deger)
+        if kategori == 'islem':
+            return _ISLEM_EN.get(deger, deger)
+        return deger
+
+    _ODEME_EN = {'Pesin': 'Cash in Advance', 'Peşin': 'Cash in Advance',
+                 '%30 Avans %70 Yukleme Oncesi': '30% Advance, 70% Before Loading',
+                 '%50 Avans %50 Yukleme Oncesi': '50% Advance, 50% Before Loading',
+                 'Akreditif (L/C)': 'Letter of Credit (L/C)', 'Mal Mukabili': 'Cash Against Goods',
+                 'Vesaik Mukabili': 'Cash Against Documents', 'Vadeli': 'Deferred Payment'}
+
+    def _odeme_cevir(deger, dil='en'):
+        if not deger:
+            return ''
+        try:
+            d = str(dil).lower() if dil else 'en'
+        except Exception:
+            d = 'en'
+        if d.startswith('tr'):
+            return str(deger)
+        return _ODEME_EN.get(str(deger), str(deger))
+
+    def _aciklama_cevir(metin, dil='en'):
+        # Serbest metin — güvenli davranış: olduğu gibi döndür
+        return '' if metin is None else str(metin)
+
+    app.jinja_env.globals['_deger_cevir'] = _deger_cevir
+    app.jinja_env.globals['_odeme_cevir'] = _odeme_cevir
+    app.jinja_env.globals['_aciklama_cevir'] = _aciklama_cevir
+
     db_url = os.environ.get('DATABASE_URL', 'sqlite:///milestone.db')
     if db_url.startswith('postgres://'):
         db_url = db_url.replace('postgres://', 'postgresql://', 1)
@@ -2935,6 +3092,8 @@ def create_app():
                         if aktif_rez:
                             app.logger.warning(f'Stok {stok_id} Serbest -> {len(aktif_rez)} rezervasyon iptal edildi')
                 if 'konum' in data: stok.konum = data['konum']
+                if 'uretici' in data and data['uretici']:
+                    stok.uretici = data['uretici']
                 if 'alis_fiyati' in data:
                     try: stok.alis_fiyati = float(data['alis_fiyati']) if data['alis_fiyati'] not in (None,'') else None
                     except (ValueError, TypeError): pass
@@ -6934,9 +7093,11 @@ def create_app():
         if _auth_required(): return jsonify({'error': 'Unauthorized'}), 401
         data = request.json
         doviz       = data.get('doviz', 'USD')
-        maliyet_tip = data['maliyet_tip']
-        baglanti_tip = data['baglanti_tip']
-        baglanti_id  = data['baglanti_id']
+        maliyet_tip = data.get('maliyet_tip')
+        baglanti_tip = data.get('baglanti_tip')
+        baglanti_id  = data.get('baglanti_id')
+        if not maliyet_tip or not baglanti_tip or not baglanti_id:
+            return jsonify({'ok': False, 'mesaj': 'maliyet_tip, baglanti_tip ve baglanti_id zorunludur'}), 400
         fatura_no   = (data.get('fatura_no') or '').strip()
         cari_id     = data.get('cari_id') or None
         kullanici   = session['kullanici']
@@ -8106,6 +8267,13 @@ def create_app():
                     db.session.add(kh)
                     db.session.flush()
                     c.kasa_hareket_id = kh.id
+                    # Kasa bakiyesini güncelle (alınan çek tahsili → giriş, verilen çek ödemesi → çıkış)
+                    _kasa_obj = db.session.get(Kasa, int(d['kasa_id']))
+                    if _kasa_obj:
+                        if tip == 'giris':
+                            _kasa_obj.bakiye = q3((_kasa_obj.bakiye or 0) + q3(c.tutar))
+                        else:
+                            _kasa_obj.bakiye = q3((_kasa_obj.bakiye or 0) - q3(c.tutar))
                 except Exception:
                     pass
             mesaj = 'Çek tahsil edildi' if c.yon == 'alinan' else 'Çek ödendi'
@@ -8290,7 +8458,7 @@ def create_app():
             return jsonify({'ok': False, 'mesaj': 'Rezervasyon bulunamadi'}), 404
         if rez.iptal_nedeni:
             return jsonify({'ok': False, 'mesaj': 'Bu rezervasyon zaten iptal edilmis'}), 400
-        data = request.json or {}
+        data = request.get_json(silent=True) or {}
         neden = (data.get('neden') or 'Manuel iptal').strip()[:200]
         eski_durum = None
         stok_id = rez.stok_id
