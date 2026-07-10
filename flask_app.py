@@ -175,6 +175,10 @@ def create_app():
     app.jinja_env.globals['_odeme_cevir'] = _odeme_cevir
     app.jinja_env.globals['_aciklama_cevir'] = _aciklama_cevir
 
+    # Heartbeat gate icin: login sonrasi ilk sayfa yuklemesini isaretler.
+    # session.pop ile bir kez okunur ve silinir — sonraki yuklemeler normal.
+    app.jinja_env.globals['taze_giris_al'] = lambda: session.pop('taze_giris', False)
+
     db_url = os.environ.get('DATABASE_URL', 'sqlite:///milestone.db')
     if db_url.startswith('postgres://'):
         db_url = db_url.replace('postgres://', 'postgresql://', 1)
@@ -305,6 +309,59 @@ def create_app():
             app.logger.error(f'Yazma yetki kontrol hatasi: {e}')
         return None
     # ─── /YAZMA YETKİ GUARD ───────────────────────────────────────────
+
+    # ─── OKUMA YETKİ GUARD (GET) ──────────────────────────────────────
+    # Bir modülü OKUMA yetkisi olmayan kullanıcı, o modülün GET verilerini
+    # de çekemesin. Çapraz-modül yardımcı GET'ler muaftır (dropdown'lar,
+    # kur, ayar okuma vb.) — aksi halde yetkili kullanıcı bile kendi
+    # ekranını kullanamaz hale gelir.
+    OKUMA_MUAF_PATHS = [
+        '/api/yetkilerim',        # kullanıcının kendi yetkileri
+        '/api/diag/',             # diagnostic
+        '/api/doviz_kur',         # kur — her ekranda lazım
+        '/api/dashboard',         # dashboard özetleri
+        '/api/ayarlar/lookup',    # cins/ülke/banka dropdown'ları (çapraz)
+        '/api/ayarlar/kdv_oran',  # KDV oranı (çapraz)
+        '/api/ayarlar/firma',     # firma bilgisi (belge/proforma çapraz)
+    ]
+
+    @app.before_request
+    def _okuma_yetki_guard():
+        """GET isteklerinde, kullanicinin ilgili modul icin en az OKUMA
+        yetkisi olup olmadigini kontrol eder."""
+        if request.method != 'GET':
+            return None
+        if not request.path.startswith('/api/'):
+            return None
+        if 'kullanici' not in session:
+            # Oturum yoksa _auth_required zaten 401 döndürecek; burada karışma
+            return None
+        if session.get('rol') in ('admin', 'ADMIN'):
+            return None
+        for muaf in OKUMA_MUAF_PATHS:
+            if request.path.startswith(muaf):
+                return None
+        modul = None
+        for prefix, m in URL_MODUL_MAP:
+            if request.path.startswith(prefix):
+                modul = m
+                break
+        if not modul:
+            return None  # tanimlanmamis API — sessizce gec
+        try:
+            yetkiler = _kullanici_yetkileri()
+            mevcut = yetkiler.get(modul, 'gizli')
+            # okuma veya yazma yeterli; sadece 'gizli' engellenir
+            if mevcut not in ('okuma', 'yazma'):
+                return jsonify({
+                    'ok': False,
+                    'error': 'yetki_yok',
+                    'mesaj': f'⛔ Bu modülü görüntüleme yetkiniz yok. Modül: {modul}'
+                }), 403
+        except Exception as e:
+            app.logger.error(f'Okuma yetki kontrol hatasi: {e}')
+        return None
+    # ─── /OKUMA YETKİ GUARD ───────────────────────────────────────────
 
     @app.context_processor
     def _yetki_context():
@@ -2006,6 +2063,7 @@ def create_app():
             if k and check_password_hash(k.sifre, sifre):
                 session['kullanici'] = k.ad
                 session['rol'] = k.rol
+                session['taze_giris'] = True  # heartbeat gate'i login sonrasi ilk yuklemede atlatir
                 _log_audit('GIRIS', 'kullanici', k.id, aciklama=f'{k.ad} giris yapti')
                 db.session.commit()
                 # Arka planda otomatik yedek al (giriş bekletmesin)

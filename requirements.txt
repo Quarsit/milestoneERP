@@ -27,7 +27,7 @@ Jinja2==3.1.6
 SQLAlchemy==2.0.50
 # PostgreSQL sürücüsü — Windows'ta hazır wheel olarak gelir,
 # Visual C++ derleme aracı GEREKTİRMEZ.
-psycopg2-binary==2.9.10
+# psycopg2-binary==2.9.10
 
 # ----- ASGI sunucu katmanı (server.py FastAPI köprüsü) -----
 fastapi==0.110.1
@@ -38,7 +38,7 @@ uvicorn==0.25.0
 # (uvicorn[standard] yazsaydık uvloop'u çekmeye çalışırdı; uvloop
 #  Windows'ta DESTEKLENMEZ. Bu yüzden Windows'ta çalışanları tek tek
 #  yazdık: httptools, websockets, watchfiles.)
-httptools==0.6.4
+httptools==0.8.0
 websockets==16.0
 watchfiles==1.2.0
 

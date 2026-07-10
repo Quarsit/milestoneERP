@@ -167,6 +167,33 @@
     [x-cloak] { display: none !important; }
   </style>
   {% block head %}{% endblock %}
+<script>
+/* ═══ OTURUM HEARTBEAT GATE ═══
+   Amaç: sekme/tarayıcı kapatılıp yeniden açıldığında mutlaka yeniden login.
+   Mantık: açık sekme localStorage'daki damgayı her 5 sn tazeler. Sayfa
+   yüklenirken damga 15 sn'den bayatsa (tüm sekmeler kapatılmış demektir)
+   /cikis'e yönlendirilir → oturum temizlenir → login ekranı.
+   Çoklu sekme: herhangi bir açık sekme damgayı taze tuttuğu için diğer
+   sekmeler etkilenmez. Login sonrası ilk yükleme taze_giris ile muaftır. */
+(function() {
+  if (location.pathname === '/giris' || location.pathname === '/cikis') return;
+  var HB_KEY = 'erp_hb';
+  var BAYAT_MS = 15000;
+  {% if taze_giris_al() %}
+  localStorage.setItem(HB_KEY, String(Date.now()));
+  {% endif %}
+  var hb = parseInt(localStorage.getItem(HB_KEY) || '0', 10);
+  if (!hb || (Date.now() - hb) > BAYAT_MS) {
+    localStorage.removeItem(HB_KEY);
+    location.replace('/cikis');
+    return;
+  }
+  localStorage.setItem(HB_KEY, String(Date.now()));
+  setInterval(function() {
+    localStorage.setItem(HB_KEY, String(Date.now()));
+  }, 5000);
+})();
+</script>
 </head>
 <body x-data="{ sidebarOpen: true }">
 
