@@ -1751,8 +1751,17 @@ def create_app():
                 marj = (kar_usd / satis_pay_usd * 100) if satis_pay_usd else 0
 
                 # MIKTAR ve BIRIM - sip.birim ve _stok_olcu
-                sat_birim = (sip.birim if 'sip' in dir() and sip else None) or (
-                    'ton' if rz.stok_tip == 'BLOK' else 'm2')
+                # FAZ 16: Siparis.birim kaldirildi; kalemden al (yoksa stok tipine gore varsayilan)
+                _sb = None
+                try:
+                    _s_id = getattr(rz, 'siparis_id', None)
+                    if _s_id:
+                        _k = (SiparisKalem.query.filter_by(siparis_id=_s_id)
+                              .order_by(SiparisKalem.sira).first())
+                        _sb = _k.birim if _k else None
+                except Exception:
+                    _sb = None
+                sat_birim = _sb or ('ton' if rz.stok_tip == 'BLOK' else 'm2')
                 # sip referansı yoksa fatura'dan al
                 if not sat_birim:
                     sat_birim = 'm2'
@@ -3680,7 +3689,9 @@ def create_app():
                     fat = Fatura.query.filter_by(fatura_no=s.fatura_no).first()
 
                 sip = Siparis.query.get(s.siparis_id) if s.siparis_id else None
-                sat_birim = (sip.birim if sip else None) or s.birim or ('ton' if s.stok_tip == 'BLOK' else 'm2')
+                _k = (SiparisKalem.query.filter_by(siparis_id=s.siparis_id)
+                      .order_by(SiparisKalem.sira).first()) if s.siparis_id else None
+                sat_birim = (_k.birim if _k else None) or s.birim or ('ton' if s.stok_tip == 'BLOK' else 'm2')
 
                 if stok:
                     stok_miktar = _stok_olcu(stok, sat_birim)
@@ -3978,10 +3989,19 @@ def create_app():
             if s.siparis_id:
                 sip = Siparis.query.get(s.siparis_id)
                 if sip:
+                    # FAZ 16: cins/urun_tip/miktar/birim/fiyat artik SiparisKalem'de.
+                    # Cok kalemli siparisde ilk kalem temsili, birden fazlaysa "+N kalem".
+                    _kl = SiparisKalem.query.filter_by(siparis_id=sip.id).order_by(SiparisKalem.sira).all()
+                    _ilk = _kl[0] if _kl else None
                     siparis_info = {
-                        'id': sip.id, 'cins': sip.cins, 'urun_tip': sip.urun_tip,
-                        'miktar': sip.miktar, 'birim': sip.birim,
-                        'fiyat': sip.satis_fiyati, 'doviz': sip.doviz
+                        'id': sip.id,
+                        'cins': (_ilk.cins if _ilk else None) or '-',
+                        'urun_tip': (_ilk.urun_tip if _ilk else None) or '-',
+                        'miktar': sum((k.miktar or 0) for k in _kl) if _kl else 0,
+                        'birim': (_ilk.birim if _ilk else None) or '',
+                        'fiyat': (_ilk.birim_fiyat if _ilk else None) or 0,
+                        'kalem_sayisi': len(_kl),
+                        'doviz': sip.doviz
                     }
 
             grup['sevkiyatlar'].append({
@@ -4114,8 +4134,8 @@ def create_app():
                 'siparis_id': sip_id,
                 'musteri': ilk_satis.musteri or sip.musteri or '?',
                 'musteri_ulke': ilk_satis.musteri_ulke or '-',
-                'cins': ilk_satis.cins or sip.cins or '?',
-                'stok_tip': ilk_satis.stok_tip or sip.urun_tip or '?',
+                'cins': ilk_satis.cins or '?',
+                'stok_tip': ilk_satis.stok_tip or '?',
                 'satis_tarihi': ilk_satis.satis_tarihi.isoformat() if ilk_satis.satis_tarihi else None,
                 'stok_adedi': len(satislar),
                 'satis_usd': q3(toplam_satis_usd),
@@ -6848,10 +6868,13 @@ def create_app():
                 })
 
         sip = Siparis.query.get(siparis_id)
+        # FAZ 16: satis_fiyati Siparis'ten kalktı; ilk kalemin birim fiyati temsili.
+        _ilk_kalem = (SiparisKalem.query.filter_by(siparis_id=siparis_id)
+                      .order_by(SiparisKalem.sira).first()) if sip else None
         return jsonify({
             'ok': True,
             'stoklar': stoklar,
-            'satis_fiyati': sip.satis_fiyati if sip else 0,
+            'satis_fiyati': (_ilk_kalem.birim_fiyat if _ilk_kalem else 0) or 0,
             'doviz': sip.doviz if sip else 'USD',
             'odeme_sekli': sip.odeme_sekli if sip else '',
             'teslim_sekli': sip.teslim_sekli if sip else '',
@@ -9711,8 +9734,12 @@ def create_app():
         if not sip:
             return jsonify({'ok': False, 'mesaj': 'Siparis bulunamadi'}), 404
 
-        # Siparis tutari = satis_fiyati x miktar
-        siparis_tutari = (sip.satis_fiyati or 0) * (sip.miktar or 0)
+        # FAZ 16: tutar artik kalemlerden gelir (toplam_tutar alani da tutulur)
+        _kalemler = SiparisKalem.query.filter_by(siparis_id=siparis_id).order_by(SiparisKalem.sira).all()
+        siparis_tutari = (sip.toplam_tutar
+                          or sum((k.toplam_fiyat or 0) for k in _kalemler)
+                          or 0)
+        _ilk_kalem = _kalemler[0] if _kalemler else None
 
         # Bagli proformalar
         proformalar = Proforma.query.filter_by(siparis_id=siparis_id).all()
@@ -9773,7 +9800,10 @@ def create_app():
                 'tutar': q3(siparis_tutari),
                 'doviz': sip.doviz or 'USD',
                 'durum': sip.durum,
-                'cins': sip.cins, 'miktar': sip.miktar, 'birim': sip.birim,
+                'cins': (_ilk_kalem.cins if _ilk_kalem else None) or '-',
+                'miktar': sum((k.miktar or 0) for k in _kalemler),
+                'birim': (_ilk_kalem.birim if _ilk_kalem else None) or '',
+                'kalem_sayisi': len(_kalemler),
                 'tarih': sip.siparis_tarihi.isoformat() if sip.siparis_tarihi else None
             },
             'proformalar': proforma_list,
@@ -9796,7 +9826,7 @@ def create_app():
             },
             'rezervasyon': {
                 'sayi': Rezervasyon.query.filter_by(siparis_id=siparis_id, iptal_nedeni=None).count(),
-                'urun_tip': sip.urun_tip
+                'urun_tip': (_ilk_kalem.urun_tip if _ilk_kalem else None) or '-'
             },
             'uyarilar': uyarilar
         })
@@ -9851,6 +9881,12 @@ def create_app():
         if not sip:
             return jsonify({'ok': False, 'mesaj': 'Siparis bulunamadi'}), 404
 
+        # FAZ 16: birim/fiyat artik SiparisKalem'de. Ilk kalem varsayilan referanstir.
+        _ik = (SiparisKalem.query.filter_by(siparis_id=siparis_id)
+               .order_by(SiparisKalem.sira).first())
+        _sip_birim_vars = (_ik.birim if _ik else None)
+        _sip_fiyat_vars = (_ik.birim_fiyat if _ik else None) or 0
+
         # Siparişe bağlı iptal edilmemiş rezervasyonlar
         rez_q = Rezervasyon.query.filter_by(siparis_id=siparis_id, iptal_nedeni=None).all()
         # Aynı stok_id birden fazla rezerve edilmişse (eski bug) tekleştir
@@ -9879,7 +9915,7 @@ def create_app():
                 yuk = getattr(stok, 'yukseklik', 0) or 0
                 kal = getattr(stok, 'kalinlik', 0) or getattr(stok, 'en', 0) or 0
                 # Sipariş'in birim'i ne ise o ölçü: ton -> tonaj, m3 -> hacim
-                _sip_birim = (sip.birim or 'ton').lower()
+                _sip_birim = (_sip_birim_vars or 'ton').lower()
                 if _sip_birim == 'ton':
                     miktar = getattr(stok, 'tonaj', 0) or 0
                 elif _sip_birim == 'm3':
@@ -9912,8 +9948,8 @@ def create_app():
                         'slab_no': slab_no,        # ilk plakanin slab no'su -> baslangic
                         'boy': boy, 'yukseklik': yuk, 'kalinlik': kal,
                         'm2': 0, 'sqft': 0, 'miktar': 0, 'adet': 0,
-                        'birim': sip.birim or 'm2',
-                        'birim_fiyat': sip.satis_fiyati or 0,
+                        'birim': _sip_birim_vars or 'm2',
+                        'birim_fiyat': _sip_fiyat_vars,
                         'doviz': sip.doviz or 'USD'
                     }
                     grup_sira.append(anahtar)
@@ -9949,8 +9985,8 @@ def create_app():
                     'kasa_ici_adet': kasa_ici,  # EBATLI icin kasa basina plaka adedi
                     'tonaj': q3(getattr(stok, 'tonaj', 0) or 0) if r.stok_tip == 'BLOK' else None,
                     'hacim_m3': q3(getattr(stok, 'hacim_m3', 0) or 0) if r.stok_tip == 'BLOK' else None,
-                    'birim': sip.birim or ('ton' if r.stok_tip == 'BLOK' else 'm2'),
-                    'birim_fiyat': sip.satis_fiyati or 0,
+                    'birim': _sip_birim_vars or ('ton' if r.stok_tip == 'BLOK' else 'm2'),
+                    'birim_fiyat': _sip_fiyat_vars,
                     'doviz': sip.doviz or 'USD'
                 }
                 grup_sira.append(anahtar)
