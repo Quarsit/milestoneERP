@@ -1,0 +1,19 @@
+# Yedekleme klasörleri
+backups/
+*.dump
+
+# Python geçici dosyaları
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ortam ve sistem dosyaları
+venv/
+.env
+.git/
+.gitignore
+
+# Eski yapı veya artık kullanılmayacaklar
+yedek.py
+flask_app.py
